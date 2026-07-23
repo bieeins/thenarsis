@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link, useNavigate } from 'react-router-dom';
 import { Calendar as CalendarIcon, AlertCircle } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient.js';
 import { toast } from 'sonner';
+import { crewAssignmentService } from '@/services/crewAssignmentService.js';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Button } from '@/components/ui/button.jsx';
@@ -39,31 +39,32 @@ const CrewCalendarPage = () => {
     try {
       const monthStart = startOfMonth(currentDate);
       const monthEnd = endOfMonth(monthStart);
-      const startDate = startOfWeek(monthStart).toISOString();
-      const endDate = endOfWeek(monthEnd).toISOString();
+      const startDate = startOfWeek(monthStart);
+      const endDate = endOfWeek(monthEnd);
 
-      const records = await pb.collection('crew_assignments').getFullList({
-        filter: `crew_id = "${currentUser.id}" && order_id.event_date >= "${startDate}" && order_id.event_date <= "${endDate}"`,
-        expand: 'order_id,order_id.product_id',
-        sort: 'order_id.event_date',
-        $autoCancel: false
+      const allRecords = await crewAssignmentService.listAll({ crewId: currentUser.id });
+      const records = allRecords.filter((r) => {
+        const eventDate = r.order?.event_date;
+        if (!eventDate) return false;
+        const d = new Date(eventDate);
+        return d >= startDate && d <= endDate;
       });
 
       const mappedEvents = records.map(r => {
-        const order = r.expand?.order_id || {};
+        const order = r.order || {};
         return {
           ...order,
           assignment_id: r.id,
           // Synchronize fields visually with Owner Calendar
           status: order.status || r.status || 'Pending',
           event_name: order.event_name || 'Event Details Missing',
-          event_date: order.event_date || r.assigned_date || r.created
+          event_date: order.event_date || r.assigned_date || r.created_at
         };
       });
 
       setEvents(mappedEvents);
 
-      const uniquePkgs = [...new Set(records.map(r => r.expand?.order_id?.expand?.product_id?.package_name).filter(Boolean))];
+      const uniquePkgs = [...new Set(records.map(r => r.order?.product?.package_name).filter(Boolean))];
       setPackages(uniquePkgs);
 
     } catch (err) {
@@ -78,29 +79,18 @@ const CrewCalendarPage = () => {
   useEffect(() => {
     loadAssignments();
 
-    let unsubCrew, unsubOrders;
-    
-    // Real-time synchronization
-    pb.collection('crew_assignments').subscribe('*', function (e) {
-      if (e.record.crew_id === currentUser?.id) {
-        loadAssignments();
-      }
-    }).then(u => unsubCrew = u).catch(console.error);
-
-    pb.collection('orders').subscribe('*', function (e) {
-      loadAssignments();
-    }).then(u => unsubOrders = u).catch(console.error);
+    // Poll for updates since there's no realtime backend.
+    const intervalId = setInterval(loadAssignments, 30000);
 
     return () => {
-      if (unsubCrew) pb.collection('crew_assignments').unsubscribe('*').catch(console.error);
-      if (unsubOrders) pb.collection('orders').unsubscribe('*').catch(console.error);
+      clearInterval(intervalId);
     };
   }, [loadAssignments, currentUser?.id]);
 
   const filteredEvents = useMemo(() => {
     return events.filter(event => {
       if (filters.status !== 'All' && event.status !== filters.status) return false;
-      if (filters.package !== 'All' && event.expand?.product_id?.package_name !== filters.package) return false;
+      if (filters.package !== 'All' && event.product?.package_name !== filters.package) return false;
       if (filters.search) {
         const q = filters.search.toLowerCase();
         const matchName = (event.event_name || '').toLowerCase().includes(q);

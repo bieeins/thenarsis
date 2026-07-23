@@ -1,42 +1,17 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { 
-  Activity, Calendar, UserPlus, UploadCloud, MessageSquare, 
-  CheckCircle2, TrendingUp, DollarSign, Loader2, Download,
+import {
+  Activity, Calendar, UserPlus, UploadCloud, MessageSquare,
+  CheckCircle2, TrendingUp, DollarSign, Loader2,
   Image as ImageIcon, FileArchive, File, Palette
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import pb from '@/lib/pocketbaseClient';
 import { formatDistanceToNow, format } from 'date-fns';
-import { toast } from 'sonner';
 
+// NOTE: design_work.design_file (file uploads) was removed from the schema —
+// activity.files (if ever populated) can no longer be downloaded via a
+// PocketBase-style file URL, so this timeline just lists the filenames.
 const ActivityTimeline = ({ activities, loading, eventName }) => {
-  const [downloadingFile, setDownloadingFile] = useState(null);
-
-  const handleDownload = async (record, filename) => {
-    setDownloadingFile(filename);
-    try {
-      const url = pb.files.getURL(record, filename);
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Network response was not ok');
-      const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(downloadUrl);
-      toast.success('File downloaded successfully');
-    } catch (error) {
-      toast.error('Failed to download file. Please try again.');
-    } finally {
-      setDownloadingFile(null);
-    }
-  };
-
   const getFileIcon = (filename) => {
     const ext = filename.split('.').pop().toLowerCase();
     if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) return <ImageIcon className="w-4 h-4" />;
@@ -140,26 +115,13 @@ const ActivityTimeline = ({ activities, loading, eventName }) => {
                       <div className="mt-4 space-y-2 bg-muted/30 p-3 rounded-lg border border-border/50">
                         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Attached Files</p>
                         {activity.files.map((filename, i) => (
-                          <div key={i} className="flex items-center justify-between bg-background p-2 rounded border shadow-sm hover:border-primary/40 transition-colors">
+                          <div key={i} className="flex items-center justify-between bg-background p-2 rounded border shadow-sm">
                             <div className="flex items-center gap-2 min-w-0">
                               <div className="text-primary/70 shrink-0">
                                 {getFileIcon(filename)}
                               </div>
                               <span className="text-xs font-medium truncate" title={filename}>{filename}</span>
                             </div>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="h-7 px-2 text-xs shrink-0 hover:bg-primary/10 hover:text-primary"
-                              onClick={() => handleDownload(activity.record, filename)}
-                              disabled={downloadingFile === filename}
-                            >
-                              {downloadingFile === filename ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <Download className="w-3 h-3" />
-                              )}
-                            </Button>
                           </div>
                         ))}
                       </div>

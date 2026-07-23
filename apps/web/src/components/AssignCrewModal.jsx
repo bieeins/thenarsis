@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Loader2, AlertCircle } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient';
 import { toast } from 'sonner';
+import { userService } from '@/services/userService.js';
+import { crewAssignmentService } from '@/services/crewAssignmentService.js';
 
 const AssignCrewModal = ({ open, onOpenChange, orderId, onSuccess }) => {
   const [crewMembers, setCrewMembers] = useState([]);
@@ -25,17 +26,10 @@ const AssignCrewModal = ({ open, onOpenChange, orderId, onSuccess }) => {
     setLoading(true);
     setError(false);
     try {
-      const users = await pb.collection('users').getFullList({
-        filter: "role = 'crew'",
-        sort: 'name',
-        $autoCancel: false
-      });
+      const users = await userService.listAll({ role: 'crew', sort: 'name', order: 'asc' });
       setCrewMembers(users || []);
 
-      const assignments = await pb.collection('crew_assignments').getFullList({
-        filter: `order_id = "${orderId}"`,
-        $autoCancel: false
-      });
+      const assignments = await crewAssignmentService.listAll({ orderId });
       setExistingAssignments(assignments || []);
       setSelectedIds((assignments || []).map(a => a.crew_id));
     } catch (err) {
@@ -62,19 +56,17 @@ const AssignCrewModal = ({ open, onOpenChange, orderId, onSuccess }) => {
       const toRemove = existingAssignments.filter(a => !selectedIds.includes(a.crew_id));
 
       if (toRemove.length > 0) {
-        await Promise.all(toRemove.map(a => 
-          pb.collection('crew_assignments').delete(a.id, { $autoCancel: false })
-        ));
+        await Promise.all(toRemove.map(a => crewAssignmentService.remove(a.id)));
       }
 
       if (toAdd.length > 0) {
-        await Promise.all(toAdd.map(id => 
-          pb.collection('crew_assignments').create({
+        await Promise.all(toAdd.map(id =>
+          crewAssignmentService.create({
             order_id: orderId,
             crew_id: id,
             status: 'pending',
             attendance_status: 'pending' // Explicitly use valid enum
-          }, { $autoCancel: false })
+          })
         ));
       }
 
@@ -83,7 +75,7 @@ const AssignCrewModal = ({ open, onOpenChange, orderId, onSuccess }) => {
       onOpenChange(false);
     } catch (err) {
       console.error('Failed to update crew assignments', err);
-      const errorMessage = err?.data?.message || err?.message || 'Failed to update crew assignments';
+      const errorMessage = err?.message || 'Failed to update crew assignments';
       toast.error(`Error: ${errorMessage}`);
     } finally {
       setSaving(false);

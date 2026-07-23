@@ -8,8 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Checkbox } from '@/components/ui/checkbox.jsx';
 import { Skeleton } from '@/components/ui/skeleton.jsx';
 import { toast } from 'sonner';
-import pb from '@/lib/pocketbaseClient.js';
 import NotesSection from '@/components/NotesSection.jsx';
+import { crewAssignmentService } from '@/services/crewAssignmentService.js';
+import { designWorkService } from '@/services/designWorkService.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { validateAndFormatDesignLink } from '@/lib/validateAndFormatDesignLink.js';
 
@@ -33,24 +34,16 @@ const CrewEventDetailPage = () => {
     try {
       setLoading(true);
       let record = null;
-      
+
       // Try fetching as assignment ID first
       try {
-        record = await pb.collection('crew_assignments').getOne(eventId, {
-          expand: 'order_id,order_id.product_id',
-          $autoCancel: false
-        });
+        record = await crewAssignmentService.get(eventId).then((res) => res.data);
       } catch (err) {
         // Fallback: If not found, try to search crew_assignments by order_id and crew_id
         if (currentUser?.id) {
           try {
-            record = await pb.collection('crew_assignments').getFirstListItem(
-              `order_id = "${eventId}" && crew_id = "${currentUser.id}"`,
-              {
-                expand: 'order_id,order_id.product_id',
-                $autoCancel: false
-              }
-            );
+            const matches = await crewAssignmentService.list({ orderId: eventId, crewId: currentUser.id });
+            record = matches.data?.[0] || null;
           } catch (innerErr) {
             console.error('Fallback lookup failed:', innerErr);
           }
@@ -65,13 +58,10 @@ const CrewEventDetailPage = () => {
       setIsAttending(record.attendance_confirmation || false);
 
       // Fetch related design work
-      if (record.expand?.order_id?.id) {
+      if (record.order?.id) {
         try {
-          const dWork = await pb.collection('design_work').getFirstListItem(
-            `order_id="${record.expand.order_id.id}"`,
-            { $autoCancel: false }
-          );
-          setDesignWork(dWork);
+          const dWorkRes = await designWorkService.list({ orderId: record.order.id });
+          setDesignWork(dWorkRes.data?.[0] || null);
         } catch (dwErr) {
           console.log('No design work record found for this order:', dwErr);
           setDesignWork(null);
@@ -89,11 +79,11 @@ const CrewEventDetailPage = () => {
   const handleAttendanceConfirm = async () => {
     try {
       setConfirming(true);
-      await pb.collection('crew_assignments').update(eventId, {
+      await crewAssignmentService.update(eventId, {
         attendance_confirmation: isAttending,
         attendance_status: isAttending ? 'confirmed' : 'pending'
-      }, { $autoCancel: false });
-      
+      });
+
       toast.success('Attendance status updated');
       fetchEventDetails();
     } catch (error) {
@@ -116,7 +106,7 @@ const CrewEventDetailPage = () => {
     );
   }
 
-  if (!assignment || !assignment.expand?.order_id) {
+  if (!assignment || !assignment.order) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -127,8 +117,8 @@ const CrewEventDetailPage = () => {
     );
   }
 
-  const order = assignment.expand.order_id;
-  const product = order.expand?.product_id;
+  const order = assignment.order;
+  const product = order.product;
 
   return (
     <>

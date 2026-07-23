@@ -9,34 +9,49 @@ import { Separator } from '@/components/ui/separator.jsx';
 import { 
   ArrowLeft, Calendar, MapPin, User, FileText, Link as LinkIcon, Image as ImageIcon, ExternalLink, Clock, AlertCircle, CheckCircle2, Copy, Activity, Users
 } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient.js';
 import { toast } from 'sonner';
+import { designWorkService } from '@/services/designWorkService.js';
+import { orderService } from '@/services/orderService.js';
+import { userService } from '@/services/userService.js';
+import { crewAssignmentService } from '@/services/crewAssignmentService.js';
 import { validateAndFormatDesignLink } from '@/lib/validateAndFormatDesignLink.js';
 
 const DesignWorkDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [work, setWork] = useState(null);
+  const [orderRecord, setOrderRecord] = useState(null);
+  const [assignedByName, setAssignedByName] = useState('System');
   const [crewList, setCrewList] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchDetail = async () => {
       try {
-        const record = await pb.collection('design_work').getOne(id, {
-          expand: 'order_id,order_id.product_id,designer_id,assigned_by',
-          $autoCancel: false
-        });
+        const res = await designWorkService.get(id);
+        const record = res.data;
         setWork(record);
 
         if (record.order_id) {
-          const crewAssignments = await pb.collection('crew_assignments').getFullList({
-            filter: `order_id="${record.order_id}"`,
-            expand: 'crew_id',
-            $autoCancel: false
-          });
-          const crews = crewAssignments.map(ca => ca.expand?.crew_id).filter(Boolean);
+          try {
+            const orderRes = await orderService.get(record.order_id);
+            setOrderRecord(orderRes.data);
+          } catch (orderErr) {
+            console.error('Failed to load related order:', orderErr);
+          }
+
+          const crewAssignments = await crewAssignmentService.listAll({ orderId: record.order_id });
+          const crews = crewAssignments.map(ca => ca.crew).filter(Boolean);
           setCrewList(crews);
+        }
+
+        if (record.assigned_by) {
+          try {
+            const userRes = await userService.get(record.assigned_by);
+            setAssignedByName(userRes.data?.name || 'System');
+          } catch (userErr) {
+            setAssignedByName('System');
+          }
         }
 
       } catch (err) {
@@ -70,10 +85,10 @@ const DesignWorkDetailPage = () => {
     );
   }
 
-  const order = work.expand?.order_id || {};
-  const product = order.expand?.product_id || {};
-  const designer = work.expand?.designer_id || {};
-  const assignedBy = work.expand?.assigned_by?.name || 'System';
+  const order = orderRecord || {};
+  const product = order.product || {};
+  const designer = work.designer || {};
+  const assignedBy = assignedByName;
   const linkInfo = validateAndFormatDesignLink(work.design_file_link);
   const eventDate = order.event_date ? parseISO(order.event_date) : null;
 

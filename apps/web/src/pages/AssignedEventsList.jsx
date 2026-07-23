@@ -20,8 +20,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Eye, Search } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient';
 import { useAuth } from '@/contexts/AuthContext';
+import { crewAssignmentService } from '@/services/crewAssignmentService.js';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -41,12 +41,7 @@ const AssignedEventsList = () => {
 
   const loadEvents = async () => {
     try {
-      const records = await pb.collection('crew_assignments').getFullList({
-        filter: `crew_id = "${currentUser.id}"`,
-        expand: 'order_id,order_id.product_id',
-        sort: '+order_id.event_date',
-        $autoCancel: false
-      });
+      const records = await crewAssignmentService.listAll({ crewId: currentUser.id });
       setEvents(records);
       setFilteredEvents(records);
     } catch (error) {
@@ -66,7 +61,7 @@ const AssignedEventsList = () => {
     if (searchQuery) {
       const lowerQuery = searchQuery.toLowerCase();
       result = result.filter(e => {
-        const order = e.expand?.order_id;
+        const order = e.order;
         return order?.event_name?.toLowerCase().includes(lowerQuery) || 
                order?.customer_name?.toLowerCase().includes(lowerQuery);
       });
@@ -143,7 +138,7 @@ const AssignedEventsList = () => {
                     </TableHeader>
                     <TableBody>
                       {filteredEvents.map((assignment) => {
-                        const order = assignment.expand?.order_id;
+                        const order = assignment.order;
                         return (
                           <TableRow key={assignment.id} className="hover:bg-muted/30">
                             <TableCell className="pl-6 font-medium whitespace-nowrap">
@@ -154,7 +149,7 @@ const AssignedEventsList = () => {
                               {order?.event_date ? format(new Date(order.event_date), 'MMM dd, yyyy') : '-'}
                             </TableCell>
                             <TableCell className="truncate max-w-[200px]">{order?.event_location}</TableCell>
-                            <TableCell>{order?.expand?.product_id?.package_name}</TableCell>
+                            <TableCell>{order?.product?.package_name}</TableCell>
                             <TableCell>
                               <span className={`badge-status-${assignment.status === 'pending' ? 'waiting' : 'done'}`}>
                                 {assignment.status}

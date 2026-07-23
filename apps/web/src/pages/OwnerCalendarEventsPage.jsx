@@ -4,8 +4,10 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Calendar as CalendarIcon, Download, Printer, FileText } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient';
 import { toast } from 'sonner';
+import { orderService } from '@/services/orderService.js';
+import { crewAssignmentService } from '@/services/crewAssignmentService.js';
+import { designWorkService } from '@/services/designWorkService.js';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
 
 import CalendarSummaryCards from '@/components/CalendarSummaryCards.jsx';
@@ -39,25 +41,23 @@ const OwnerCalendarEventsPage = () => {
       const startDate = startOfWeek(monthStart).toISOString();
       const endDate = endOfWeek(monthEnd).toISOString();
 
-      const records = await pb.collection('orders').getFullList({
-        filter: `event_date >= "${startDate}" && event_date <= "${endDate}"`,
-        expand: 'product_id,assigned_designer_id',
+      const records = await orderService.listAll({
+        startDate,
+        endDate,
         sort: 'event_date',
-        $autoCancel: false
+        order: 'asc',
       });
+      const orderIds = new Set(records.map((r) => r.id));
 
       // Also fetch crew assignments to get crew names/count per order
-      const assignments = await pb.collection('crew_assignments').getFullList({
-        filter: `order_id.event_date >= "${startDate}" && order_id.event_date <= "${endDate}"`,
-        expand: 'crew_id',
-        $autoCancel: false
-      });
+      const allAssignments = await crewAssignmentService.listAll();
+      const assignments = allAssignments.filter((a) => orderIds.has(a.order_id));
 
       const crewCountMap = {};
       const crewNamesMap = {};
       assignments.forEach(curr => {
         crewCountMap[curr.order_id] = (crewCountMap[curr.order_id] || 0) + 1;
-        const crewName = curr.expand?.crew_id?.name;
+        const crewName = curr.crew?.name;
         if (crewName) {
           crewNamesMap[curr.order_id] = crewNamesMap[curr.order_id]
             ? `${crewNamesMap[curr.order_id]}, ${crewName}`
@@ -66,11 +66,8 @@ const OwnerCalendarEventsPage = () => {
       });
 
       // Fetch design_work to get the design asset link per order
-      const designWorks = await pb.collection('design_work').getFullList({
-        filter: `order_id.event_date >= "${startDate}" && order_id.event_date <= "${endDate}"`,
-        sort: '-updated',
-        $autoCancel: false
-      });
+      const allDesignWorks = await designWorkService.listAll({ sort: 'updated_at', order: 'desc' });
+      const designWorks = allDesignWorks.filter((dw) => orderIds.has(dw.order_id));
 
       const designLinkMap = {};
       designWorks.forEach(dw => {
@@ -82,7 +79,7 @@ const OwnerCalendarEventsPage = () => {
       const enrichedRecords = records.map(r => ({
         ...r,
         crewCount: crewCountMap[r.id] || 0,
-        designer_name: r.expand?.assigned_designer_id?.name,
+        designer_name: r.assigned_designer?.name,
         crew_names: crewNamesMap[r.id],
         design_file_link: designLinkMap[r.id]
       }));
@@ -90,7 +87,7 @@ const OwnerCalendarEventsPage = () => {
       setEvents(enrichedRecords);
 
       // Extract unique packages for filter
-      const uniquePkgs = [...new Set(records.map(r => r.expand?.product_id?.package_name).filter(Boolean))];
+      const uniquePkgs = [...new Set(records.map(r => r.product?.package_name).filter(Boolean))];
       setPackages(uniquePkgs);
 
     } catch (error) {
@@ -104,14 +101,11 @@ const OwnerCalendarEventsPage = () => {
   useEffect(() => {
     loadEvents();
 
-    // Real-time subscription
-    let unsubscribe;
-    pb.collection('orders').subscribe('*', function (e) {
-      loadEvents();
-    }).then(u => unsubscribe = u).catch(console.error);
+    // Poll for updates since there's no realtime backend.
+    const intervalId = setInterval(loadEvents, 30000);
 
     return () => {
-      if (unsubscribe) pb.collection('orders').unsubscribe('*').catch(console.error);
+      clearInterval(intervalId);
     };
   }, [loadEvents]);
 
@@ -132,7 +126,7 @@ const OwnerCalendarEventsPage = () => {
   // Apply filters
   const filteredEvents = events.filter(event => {
     if (filters.status !== 'All' && event.status !== filters.status) return false;
-    if (filters.package !== 'All' && event.expand?.product_id?.package_name !== filters.package) return false;
+    if (filters.package !== 'All' && event.product?.package_name !== filters.package) return false;
     if (filters.search) {
       const q = filters.search.toLowerCase();
       const matchName = (event.event_name || '').toLowerCase().includes(q);
@@ -172,7 +166,7 @@ const OwnerCalendarEventsPage = () => {
   const handleDeleteOrder = async (id) => {
     if (window.confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
       try {
-        await pb.collection('orders').delete(id, { $autoCancel: false });
+        await orderService.remove(id);
         toast.success('Order deleted successfully');
         setIsModalOpen(false);
         loadEvents();
@@ -195,7 +189,7 @@ const OwnerCalendarEventsPage = () => {
       format(new Date(e.event_date), 'HH:mm'),
       `"${e.event_location || ''}"`,
       e.status,
-      `"${e.expand?.product_id?.package_name || ''}"`,
+      `"${e.product?.package_name || ''}"`,
       e.total_amount || 0
     ]);
     

@@ -1,8 +1,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import pb from '@/lib/pocketbaseClient.js';
 import { toast } from 'sonner';
+import { apiClient, ApiError, setAccessToken } from '@/lib/apiClient.js';
 
 const AuthContext = createContext(null);
 
@@ -16,25 +16,24 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     const initAuth = async () => {
-      if (pb.authStore.isValid && pb.authStore.model) {
-        try {
-          // Refresh session to ensure token is still valid
-          const authData = await pb.collection('users').authRefresh({ $autoCancel: false });
-          setCurrentUser(authData.record);
-        } catch (error) {
-          console.error('Session expired or invalid:', error);
-          pb.authStore.clear();
-          setCurrentUser(null);
-          // Only show toast if we were previously logged in and session actually expired
-          if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
-            toast.error('Your session has expired. Please log in again.');
-            navigate('/login');
-          }
+      try {
+        const refreshRes = await apiClient.post('/api/auth/refresh');
+        setAccessToken(refreshRes.data.accessToken);
+        setCurrentUser(refreshRes.data.user);
+        setIsAuthenticated(true);
+      } catch (error) {
+        setAccessToken(null);
+        setCurrentUser(null);
+        setIsAuthenticated(false);
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+          toast.error('Your session has expired. Please log in again.');
+          navigate('/login');
         }
       }
       setInitialLoading(false);
@@ -45,54 +44,52 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const authData = await pb.collection('users').authWithPassword(email, password, { $autoCancel: false });
-      
-      const userRole = authData.record.role;
-      const validRoles = ['owner', 'designer', 'crew', 'design_reviewer']; // Added design_reviewer
-      
-      if (!validRoles.includes(userRole)) {
-        pb.authStore.clear();
-        throw new Error('Invalid user role assigned. Please contact administrator.');
-      }
-      
-      setCurrentUser(authData.record);
-      return authData.record;
+      const res = await apiClient.post('/api/auth/login', { email, password });
+      setAccessToken(res.data.accessToken);
+      setCurrentUser(res.data.user);
+      setIsAuthenticated(true);
+      return res.data.user;
     } catch (error) {
+      setAccessToken(null);
+      setIsAuthenticated(false);
       console.error('Login failed:', error);
-      pb.authStore.clear();
-      
-      // Better error mapping
-      if (error.status === 400 || error.message.includes('Failed to authenticate')) {
+
+      if (error instanceof ApiError && error.status === 401) {
         throw new Error('Invalid email or password');
       }
-      
       throw error;
     }
   };
 
   const signup = async (email, password, passwordConfirm, name, role, phone) => {
     try {
-      const record = await pb.collection('users').create({
+      const res = await apiClient.post('/api/auth/register', {
         email: email.trim().toLowerCase(),
         password,
         passwordConfirm,
         name: name.trim(),
         role,
-        phone: phone ? phone.trim() : ''
-      }, { $autoCancel: false });
-      
-      // Auto-login after signup
-      await login(email, password);
-      return record;
+        phone: phone ? phone.trim() : undefined,
+      });
+      setAccessToken(res.data.accessToken);
+      setCurrentUser(res.data.user);
+      setIsAuthenticated(true);
+      return res.data.user;
     } catch (error) {
       console.error('Signup failed:', error);
       throw error;
     }
   };
 
-  const logout = () => {
-    pb.authStore.clear();
+  const logout = async () => {
+    try {
+      await apiClient.post('/api/auth/logout');
+    } catch {
+      // best-effort — clear local state regardless
+    }
+    setAccessToken(null);
     setCurrentUser(null);
+    setIsAuthenticated(false);
     navigate('/login');
     toast.success('Logged out successfully');
   };
@@ -102,7 +99,8 @@ export const AuthProvider = ({ children }) => {
     login,
     signup,
     logout,
-    isAuthenticated: pb.authStore.isValid
+    isAuthenticated,
+    initialLoading,
   };
 
   if (initialLoading) {

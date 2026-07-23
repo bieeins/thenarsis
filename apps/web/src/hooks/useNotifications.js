@@ -1,26 +1,38 @@
-import { useState, useEffect, useCallback } from 'react';
-import pb from '@/lib/pocketbaseClient';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { notificationService } from '@/services/notificationService.js';
+
+const POLL_INTERVAL_MS = 30000;
 
 export const useNotifications = () => {
   const { currentUser, isAuthenticated } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const knownIds = useRef(new Set());
+  const isFirstLoad = useRef(true);
 
   const fetchNotifications = useCallback(async () => {
     if (!isAuthenticated || !currentUser) return;
-    
+
     try {
-      const records = await pb.collection('notifications').getFullList({
-        filter: `user_id = "${currentUser.id}"`,
-        sort: '-created',
-        $autoCancel: false
-      });
-      
-      setNotifications(records);
-      setUnreadCount(records.filter(n => !n.is_read).length);
+      const records = await notificationService.listMine();
+      const sorted = [...records].sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
+
+      if (!isFirstLoad.current) {
+        const newOnes = sorted.filter((n) => !knownIds.current.has(n.id));
+        newOnes.forEach((n) => {
+          toast.info(n.title, { description: n.message });
+        });
+      }
+      knownIds.current = new Set(sorted.map((n) => n.id));
+      isFirstLoad.current = false;
+
+      setNotifications(sorted);
+      setUnreadCount(sorted.filter((n) => !n.is_read).length);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     } finally {
@@ -29,34 +41,23 @@ export const useNotifications = () => {
   }, [currentUser, isAuthenticated]);
 
   useEffect(() => {
-    fetchNotifications();
+    if (!isAuthenticated || !currentUser) return;
 
-    if (isAuthenticated && currentUser) {
-      pb.collection('notifications').subscribe('*', function (e) {
-        if (e.action === 'create' && e.record.user_id === currentUser.id) {
-          setNotifications(prev => [e.record, ...prev]);
-          setUnreadCount(prev => prev + 1);
-          toast.info(e.record.title, { description: e.record.message });
-        } else if (e.action === 'update' && e.record.user_id === currentUser.id) {
-          setNotifications(prev => prev.map(n => n.id === e.record.id ? e.record : n));
-          fetchNotifications(); // Recalculate unread count
-        } else if (e.action === 'delete') {
-          setNotifications(prev => prev.filter(n => n.id !== e.record.id));
-          fetchNotifications();
-        }
-      });
-    }
+    fetchNotifications();
+    const intervalId = setInterval(fetchNotifications, POLL_INTERVAL_MS);
 
     return () => {
-      pb.collection('notifications').unsubscribe('*');
+      clearInterval(intervalId);
     };
   }, [fetchNotifications, isAuthenticated, currentUser]);
 
   const markAsRead = async (notificationId) => {
     try {
-      await pb.collection('notifications').update(notificationId, { is_read: true }, { $autoCancel: false });
-      setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n));
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      await notificationService.markRead(notificationId);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
     }
@@ -64,8 +65,8 @@ export const useNotifications = () => {
 
   const deleteNotification = async (notificationId) => {
     try {
-      await pb.collection('notifications').delete(notificationId, { $autoCancel: false });
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      await notificationService.remove(notificationId);
+      setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
       fetchNotifications();
     } catch (error) {
       console.error('Failed to delete notification:', error);
@@ -78,6 +79,6 @@ export const useNotifications = () => {
     loading,
     markAsRead,
     deleteNotification,
-    fetchNotifications
+    fetchNotifications,
   };
 };

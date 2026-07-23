@@ -14,14 +14,20 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowLeft, User, Users, Trash2, Calendar, MapPin, Phone, Banknote, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { createAssignmentNotification } from '@/lib/notificationUtils.js';
+import { useAuth } from '@/contexts/AuthContext.jsx';
+import { orderService } from '@/services/orderService.js';
+import { userService } from '@/services/userService.js';
+import { crewAssignmentService } from '@/services/crewAssignmentService.js';
+import { designWorkService } from '@/services/designWorkService.js';
+import { designIncomeService } from '@/services/designIncomeService.js';
 
 const OrderDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [order, setOrder] = useState(null);
   const [designers, setDesigners] = useState([]);
   const [crew, setCrew] = useState([]);
@@ -48,10 +54,8 @@ const OrderDetailPage = () => {
     setLoading(true);
     setError(false);
     try {
-      const record = await pb.collection('orders').getOne(id, {
-        expand: 'product_id,assigned_designer_id',
-        $autoCancel: false
-      });
+      const res = await orderService.get(id);
+      const record = res.data;
       setOrder(record || null);
       setSelectedDesigner(record?.assigned_designer_id || 'unassigned');
     } catch (err) {
@@ -64,11 +68,17 @@ const OrderDetailPage = () => {
 
   const loadDesignData = async () => {
     try {
-      const dw = await pb.collection('design_work').getFirstListItem(`order_id="${id}"`, { $autoCancel: false }).catch(() => null);
+      const dwRes = await designWorkService.list({ orderId: id }).catch(() => null);
+      const dw = dwRes?.data?.[0] || null;
       setDesignWork(dw);
-      
-      const di = await pb.collection('design_income').getFirstListItem(`order_id="${id}"`, { $autoCancel: false }).catch(() => null);
-      setDesignIncome(di);
+
+      if (dw?.designer_id) {
+        const diRes = await designIncomeService.list({ designerId: dw.designer_id }).catch(() => null);
+        const di = diRes?.data?.find((i) => i.order_id === id) || null;
+        setDesignIncome(di);
+      } else {
+        setDesignIncome(null);
+      }
     } catch (err) {
       console.error('Error loading design related data', err);
     }
@@ -76,16 +86,10 @@ const OrderDetailPage = () => {
 
   const loadUsers = async () => {
     try {
-      const designerRecords = await pb.collection('users').getFullList({
-        filter: 'role = "designer"',
-        $autoCancel: false
-      });
+      const designerRecords = await userService.listAll({ role: 'designer' });
       setDesigners(designerRecords || []);
 
-      const crewRecords = await pb.collection('users').getFullList({
-        filter: 'role = "crew"',
-        $autoCancel: false
-      });
+      const crewRecords = await userService.listAll({ role: 'crew' });
       setCrew(crewRecords || []);
     } catch (err) {
       toast.error('Failed to load team members');
@@ -94,11 +98,7 @@ const OrderDetailPage = () => {
 
   const loadAssignedCrew = async () => {
     try {
-      const assignments = await pb.collection('crew_assignments').getFullList({
-        filter: `order_id = "${id}"`,
-        expand: 'crew_id,assigned_by',
-        $autoCancel: false
-      });
+      const assignments = await crewAssignmentService.listAll({ orderId: id });
       setAssignedCrew(assignments || []);
     } catch (err) {
       console.error('Failed to load assigned crew', err);
@@ -107,7 +107,7 @@ const OrderDetailPage = () => {
 
   const handleStatusChange = async (newStatus) => {
     try {
-      await pb.collection('orders').update(id, { status: newStatus }, { $autoCancel: false });
+      await orderService.update(id, { status: newStatus });
       toast.success('Status updated successfully');
       loadOrderDetails();
     } catch (err) {
@@ -124,33 +124,30 @@ const OrderDetailPage = () => {
     setSubmitting(true);
     try {
       if (selectedDesigner === 'unassigned') {
-        await pb.collection('orders').update(id, {
+        await orderService.update(id, {
           assigned_designer_id: null
-        }, { $autoCancel: false });
+        });
         toast.success('Designer removed successfully');
       } else {
-        await pb.collection('orders').update(id, {
+        await orderService.update(id, {
           assigned_designer_id: selectedDesigner
-        }, { $autoCancel: false });
-
-        const existingWork = await pb.collection('design_work').getFullList({
-          filter: `order_id = "${id}"`,
-          $autoCancel: false
         });
 
+        const existingWork = await designWorkService.listAll({ orderId: id });
+
         if (existingWork && existingWork.length > 0) {
-          await pb.collection('design_work').update(existingWork[0].id, {
+          await designWorkService.update(existingWork[0].id, {
             designer_id: selectedDesigner,
-            assigned_by: pb.authStore.model.id
-          }, { $autoCancel: false });
+            assigned_by: currentUser?.id
+          });
         } else {
-          await pb.collection('design_work').create({
+          await designWorkService.create({
             order_id: id,
             designer_id: selectedDesigner,
             status: 'pending',
-            assigned_by: pb.authStore.model.id,
+            assigned_by: currentUser?.id,
             assigned_date: new Date().toISOString()
-          }, { $autoCancel: false });
+          });
         }
 
         if (order.assigned_designer_id !== selectedDesigner) {
@@ -185,14 +182,14 @@ const OrderDetailPage = () => {
         return;
       }
 
-      await pb.collection('crew_assignments').create({
+      await crewAssignmentService.create({
         order_id: id,
         crew_id: selectedCrewId,
         status: 'pending',
         attendance_status: 'pending', // Replaced invalid 'belum_jawab' with valid enum 'pending'
-        assigned_by: pb.authStore.model.id,
+        assigned_by: currentUser?.id,
         assigned_date: new Date().toISOString()
-      }, { $autoCancel: false });
+      });
 
       await createAssignmentNotification(selectedCrewId, order);
 
@@ -201,7 +198,7 @@ const OrderDetailPage = () => {
       loadAssignedCrew();
     } catch (err) {
       console.error('Failed to assign crew member:', err);
-      const errorMsg = err?.data?.message || err?.message || 'Failed to assign crew member. Check permissions or valid fields.';
+      const errorMsg = err?.message || 'Failed to assign crew member. Check permissions or valid fields.';
       toast.error(`Assignment failed: ${errorMsg}`);
     } finally {
       setSubmitting(false);
@@ -211,7 +208,7 @@ const OrderDetailPage = () => {
   const handleRemoveCrew = async (assignmentId) => {
     if (window.confirm('Are you sure you want to remove this crew member from the event?')) {
       try {
-        await pb.collection('crew_assignments').delete(assignmentId, { $autoCancel: false });
+        await crewAssignmentService.remove(assignmentId);
         toast.success('Crew member removed');
         loadAssignedCrew();
       } catch (err) {
@@ -224,7 +221,7 @@ const OrderDetailPage = () => {
     if (!designIncome) return;
     setUpdatingFee(true);
     try {
-      await pb.collection('design_income').update(designIncome.id, { status }, { $autoCancel: false });
+      await designIncomeService.update(designIncome.id, { status });
       toast.success(`Fee successfully marked as ${status}`);
       await loadDesignData();
     } catch (err) {
@@ -354,7 +351,7 @@ const OrderDetailPage = () => {
                   <div className="p-6">
                     <div className="bg-muted/30 p-4 rounded-xl border">
                       <p className="text-sm text-muted-foreground uppercase tracking-wider mb-1">Package Info</p>
-                      <p className="font-medium text-lg">{order.expand?.product_id?.package_name || 'No Package Selected'}</p>
+                      <p className="font-medium text-lg">{order.product?.package_name || 'No Package Selected'}</p>
                     </div>
                   </div>
 
@@ -392,11 +389,11 @@ const OrderDetailPage = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {order.expand?.assigned_designer_id ? (
+                  {order.assigned_designer ? (
                     <div className="bg-primary/10 border border-primary/20 p-4 rounded-xl flex items-center justify-between">
                       <div>
                         <p className="text-xs text-primary font-semibold uppercase tracking-wider">Assigned Designer</p>
-                        <p className="font-semibold text-foreground mt-1">{order.expand.assigned_designer_id.name}</p>
+                        <p className="font-semibold text-foreground mt-1">{order.assigned_designer.name}</p>
                       </div>
                     </div>
                   ) : (
@@ -506,17 +503,18 @@ const OrderDetailPage = () => {
                   <div className="space-y-3">
                     {assignedCrew.length > 0 ? (
                       assignedCrew.map((assignment) => {
-                        const assigner = assignment.expand?.assigned_by;
+                        const assigner = assignment.assigned_by_user;
                         const assignerName = assigner?.name || 'System';
                         const assignerEmail = assigner?.email || '';
-                        const assignerAvatar = assigner?.avatar ? pb.files.getURL(assigner, assigner.avatar) : null;
+                        // Avatar object URLs require an authenticated fetch; fall back to initials here.
+                        const assignerAvatar = null;
                         const assignedDate = assignment.assigned_date || assignment.created;
 
                         return (
                           <div key={assignment.id} className="flex flex-col p-3 border rounded-xl bg-card hover:border-blue-200 transition-colors">
                             <div className="flex items-center justify-between mb-3">
                               <div>
-                                <p className="text-sm font-semibold">{assignment.expand?.crew_id?.name || 'Unknown'}</p>
+                                <p className="text-sm font-semibold">{assignment.crew?.name || 'Unknown'}</p>
                                 <div className="mt-1.5">
                                   {getAttendanceBadge(assignment.attendance_status)}
                                 </div>

@@ -15,8 +15,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import pb from '@/lib/pocketbaseClient';
 import { toast } from 'sonner';
+import { productService } from '@/services/productService.js';
+import { orderService } from '@/services/orderService.js';
+import { invoiceService } from '@/services/invoiceService.js';
 
 const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -63,7 +65,7 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
 
   const loadProducts = async () => {
     try {
-      const records = await pb.collection('products').getFullList({ $autoCancel: false });
+      const records = await productService.listAll();
       setProducts(records);
     } catch (error) {
       toast.error('Failed to load products');
@@ -95,18 +97,18 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
         : selectedProduct?.base_price || 0;
 
       if (order) {
-        await pb.collection('orders').update(order.id, {
+        await orderService.update(order.id, {
           customer_name: formData.customer_name,
           phone_number: formData.phone_number,
           event_name: formData.event_name,
           event_date: formData.event_date,
           event_location: formData.event_location,
           product_id: formData.product_id
-        }, { $autoCancel: false });
+        });
         toast.success('Order updated successfully');
       } else {
         const invoiceNumber = generateInvoiceNumber();
-        
+
         const orderData = {
           customer_name: formData.customer_name,
           phone_number: formData.phone_number,
@@ -115,24 +117,23 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
           event_location: formData.event_location,
           product_id: formData.product_id,
           status: 'Pending',
-          invoice_number: invoiceNumber
+          invoice_number: invoiceNumber,
+          items: [{
+            product_id: formData.product_id,
+            base_price: selectedProduct?.base_price || 0,
+            adjusted_price: formData.adjusted_price ? parseFloat(formData.adjusted_price) : null,
+            quantity: 1
+          }]
         };
 
-        const newOrder = await pb.collection('orders').create(orderData, { $autoCancel: false });
+        const newOrderRes = await orderService.create(orderData);
+        const newOrder = newOrderRes.data;
 
-        await pb.collection('invoices').create({
+        await invoiceService.create({
           order_id: newOrder.id,
           invoice_number: invoiceNumber,
           total_amount: finalPrice
-        }, { $autoCancel: false });
-
-        await pb.collection('order_items').create({
-          order_id: newOrder.id,
-          product_id: formData.product_id,
-          base_price: selectedProduct?.base_price || 0,
-          adjusted_price: formData.adjusted_price ? parseFloat(formData.adjusted_price) : null,
-          quantity: 1
-        }, { $autoCancel: false });
+        });
 
         toast.success('Order created successfully');
       }

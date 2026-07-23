@@ -20,8 +20,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Eye, Search, FolderOpen } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient';
 import { useAuth } from '@/contexts/AuthContext';
+import { designWorkService } from '@/services/designWorkService.js';
+import { productService } from '@/services/productService.js';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -41,14 +42,20 @@ const DesignWorkList = () => {
 
   const loadDesignWork = async () => {
     try {
-      const records = await pb.collection('design_work').getFullList({
-        filter: `designer_id = "${currentUser.id}"`,
-        expand: 'order_id,order_id.product_id',
-        sort: '+order_id.event_date',
-        $autoCancel: false
-      });
-      setWorkList(records);
-      setFilteredWork(records);
+      const [records, products] = await Promise.all([
+        designWorkService.listAll({ designerId: currentUser.id }),
+        productService.listAll(),
+      ]);
+      const productMap = new Map(products.map((p) => [p.id, p]));
+      const enriched = records.map((r) => ({
+        ...r,
+        order: r.order
+          ? { ...r.order, product: productMap.get(r.order.product_id) || null }
+          : null,
+      }));
+      enriched.sort((a, b) => new Date(a.order?.event_date || 0) - new Date(b.order?.event_date || 0));
+      setWorkList(enriched);
+      setFilteredWork(enriched);
     } catch (error) {
       toast.error('Failed to load projects');
     } finally {
@@ -66,7 +73,7 @@ const DesignWorkList = () => {
     if (searchQuery) {
       const lowerQuery = searchQuery.toLowerCase();
       result = result.filter(w => {
-        const order = w.expand?.order_id;
+        const order = w.order;
         return order?.event_name?.toLowerCase().includes(lowerQuery) || 
                order?.customer_name?.toLowerCase().includes(lowerQuery);
       });
@@ -165,7 +172,7 @@ const DesignWorkList = () => {
                     </TableHeader>
                     <TableBody>
                       {filteredWork.map((work) => {
-                        const order = work.expand?.order_id;
+                        const order = work.order;
                         return (
                           <TableRow key={work.id} className="hover:bg-muted/30 transition-colors">
                             <TableCell className="pl-6 font-medium whitespace-nowrap text-foreground">
@@ -179,7 +186,7 @@ const DesignWorkList = () => {
                               {order?.event_location || '-'}
                             </TableCell>
                             <TableCell className="text-muted-foreground">
-                              {order?.expand?.product_id?.package_name || 'Custom'}
+                              {order?.product?.package_name || 'Custom'}
                             </TableCell>
                             <TableCell>
                               {getStatusBadge(work.status)}

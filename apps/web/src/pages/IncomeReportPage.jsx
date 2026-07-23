@@ -6,14 +6,17 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Download, Search } from 'lucide-react';
 import FinancialNavigation from '@/components/FinancialNavigation';
-import pb from '@/lib/pocketbaseClient';
 import { format } from 'date-fns';
 import { exportToCSV, exportToPDF } from '@/lib/exportUtils';
 import { toast } from 'sonner';
+import { invoiceService } from '@/services/invoiceService.js';
+import { paymentService } from '@/services/paymentService.js';
+import { orderService } from '@/services/orderService.js';
 
 const IncomeReportPage = () => {
   const [invoices, setInvoices] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [orderMap, setOrderMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
@@ -23,12 +26,14 @@ const IncomeReportPage = () => {
 
   const loadData = async () => {
     try {
-      const [invs, pays] = await Promise.all([
-        pb.collection('invoices').getFullList({ expand: 'order_id,order_id.product_id', sort: '-created', $autoCancel: false }),
-        pb.collection('payments').getFullList({ filter: "payment_status = 'Confirmed'", $autoCancel: false })
+      const [invs, pays, orders] = await Promise.all([
+        invoiceService.listAll({ sort: 'created_at', order: 'desc' }),
+        paymentService.listAll({ status: 'Confirmed' }),
+        orderService.listAll(),
       ]);
       setInvoices(invs);
       setPayments(pays);
+      setOrderMap(Object.fromEntries(orders.map((o) => [o.id, o])));
     } catch (error) {
       toast.error('Failed to load income data');
     } finally {
@@ -43,16 +48,16 @@ const IncomeReportPage = () => {
   const filteredInvoices = invoices.filter(inv => {
     if (!search) return true;
     const s = search.toLowerCase();
-    const order = inv.expand?.order_id;
+    const order = orderMap[inv.order_id];
     return inv.invoice_number.toLowerCase().includes(s) || order?.customer_name?.toLowerCase().includes(s) || order?.event_name?.toLowerCase().includes(s);
   });
 
   const handleExportCSV = () => {
     const data = filteredInvoices.map(inv => ({
       'Invoice': inv.invoice_number,
-      'Customer': inv.expand?.order_id?.customer_name,
-      'Event': inv.expand?.order_id?.event_name,
-      'Date': format(new Date(inv.created), 'yyyy-MM-dd'),
+      'Customer': orderMap[inv.order_id]?.customer_name,
+      'Event': orderMap[inv.order_id]?.event_name,
+      'Date': format(new Date(inv.created_at), 'yyyy-MM-dd'),
       'Total Amount': inv.total_amount,
       'Paid': getPaymentForInvoice(inv.id),
       'Pending': inv.total_amount - getPaymentForInvoice(inv.id)
@@ -106,7 +111,7 @@ const IncomeReportPage = () => {
                   </TableHeader>
                   <TableBody>
                     {filteredInvoices.map(inv => {
-                      const order = inv.expand?.order_id;
+                      const order = orderMap[inv.order_id];
                       const paid = getPaymentForInvoice(inv.id);
                       const pending = inv.total_amount - paid;
                       return (
@@ -114,7 +119,7 @@ const IncomeReportPage = () => {
                           <TableCell className="font-medium whitespace-nowrap">{inv.invoice_number}</TableCell>
                           <TableCell className="whitespace-nowrap">{order?.customer_name}</TableCell>
                           <TableCell className="whitespace-nowrap">{order?.event_name}</TableCell>
-                          <TableCell>{order?.expand?.product_id?.package_name}</TableCell>
+                          <TableCell>{order?.product?.package_name}</TableCell>
                           <TableCell className="text-right font-numeric font-medium">Rp {inv.total_amount.toLocaleString()}</TableCell>
                           <TableCell className="text-right font-numeric text-revenue">Rp {paid.toLocaleString()}</TableCell>
                           <TableCell className="text-right font-numeric text-pending">{pending > 0 ? `Rp ${pending.toLocaleString()}` : '0'}</TableCell>

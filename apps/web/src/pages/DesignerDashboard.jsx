@@ -4,8 +4,8 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Palette, Clock, CheckCircle2, ArrowRight, Bell, FileEdit } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient';
 import { useAuth } from '@/contexts/AuthContext';
+import { designWorkService } from '@/services/designWorkService.js';
 import { useNotifications } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
 import { format, isAfter, isBefore, addDays } from 'date-fns';
@@ -31,11 +31,10 @@ const DesignerDashboard = () => {
   const loadDashboardData = async () => {
     try {
       // Load design work for current designer
-      const records = await pb.collection('design_work').getFullList({
-        filter: `designer_id = "${currentUser.id}"`,
-        expand: 'order_id,order_id.product_id',
-        sort: '-created',
-        $autoCancel: false
+      const records = await designWorkService.listAll({
+        designerId: currentUser.id,
+        sort: 'created_at',
+        order: 'desc',
       });
 
       // Compute stats using new database values
@@ -51,10 +50,10 @@ const DesignerDashboard = () => {
       const nextWeek = addDays(today, 7);
       
       const upcomingWork = records.filter(r => {
-        if (!r.expand?.order_id?.event_date) return false;
-        const eventDate = new Date(r.expand.order_id.event_date);
+        if (!r.order?.event_date) return false;
+        const eventDate = new Date(r.order.event_date);
         return isAfter(eventDate, today) && isBefore(eventDate, nextWeek) && r.status !== 'completed';
-      }).sort((a, b) => new Date(a.expand.order_id.event_date) - new Date(b.expand.order_id.event_date));
+      }).sort((a, b) => new Date(a.order.event_date) - new Date(b.order.event_date));
 
       setUpcoming(upcomingWork.slice(0, 5));
 
@@ -168,9 +167,9 @@ const DesignerDashboard = () => {
                       <Link to={`/designer/project/${work.id}`} key={work.id} className="block group">
                         <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card group-hover:border-primary/50 group-hover:shadow-sm transition-all duration-200">
                           <div className="flex flex-col gap-1.5">
-                            <span className="font-semibold text-foreground">{work.expand?.order_id?.event_name}</span>
+                            <span className="font-semibold text-foreground">{work.order?.event_name}</span>
                             <span className="text-sm text-muted-foreground">
-                              {work.expand?.order_id?.customer_name} • {format(new Date(work.expand?.order_id?.event_date), 'MMM dd, yyyy')}
+                              {work.order?.customer_name} • {format(new Date(work.order?.event_date), 'MMM dd, yyyy')}
                             </span>
                           </div>
                           <div className="flex flex-col items-end gap-2">
@@ -221,7 +220,7 @@ const DesignerDashboard = () => {
                             {notification.message}
                           </p>
                           <p className="text-[10px] text-muted-foreground/60 mt-2 font-medium">
-                            {format(new Date(notification.created), 'MMM dd, HH:mm')}
+                            {format(new Date(notification.created_at), 'MMM dd, HH:mm')}
                           </p>
                         </div>
                       </div>

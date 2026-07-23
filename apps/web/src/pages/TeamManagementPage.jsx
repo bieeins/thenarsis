@@ -28,7 +28,8 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import pb from '@/lib/pocketbaseClient';
+import { useAuth } from '@/contexts/AuthContext.jsx';
+import { userService } from '@/services/userService.js';
 import { toast } from 'sonner';
 import { Users, Plus, Pencil, Trash2, Shield, AlertCircle, Check, Copy } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -57,6 +58,7 @@ const generateSecurePassword = () => {
 };
 
 const TeamManagementPage = () => {
+  const { currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -81,10 +83,7 @@ const TeamManagementPage = () => {
 
   const loadUsers = async () => {
     try {
-      const records = await pb.collection('users').getFullList({
-        sort: 'name',
-        $autoCancel: false
-      });
+      const records = await userService.listAll({ sort: 'name', order: 'asc' });
       setUsers(records);
     } catch (error) {
       toast.error('Failed to load team members. Please check your connection.');
@@ -125,10 +124,10 @@ const TeamManagementPage = () => {
     setEmailError('');
 
     const emailInput = formData.email.trim().toLowerCase();
-    const isEmailChanged = !selectedUser || selectedUser.email !== emailInput;
 
-    // 1. Validate email format if it changed or if it's a new user
-    if (isEmailChanged) {
+    // Email can only be set when creating a new user — the account API does
+    // not support changing an existing user's email address.
+    if (!selectedUser) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(emailInput)) {
         setEmailError('Invalid email format');
@@ -139,34 +138,14 @@ const TeamManagementPage = () => {
     setSubmitting(true);
 
     try {
-      // 2. Check if email already exists (only if changed)
-      if (isEmailChanged) {
-        const existingUsers = await pb.collection('users').getList(1, 1, {
-          filter: `email="${emailInput}"`,
-          $autoCancel: false
-        });
-
-        if (existingUsers.totalItems > 0) {
-          setEmailError('This email is already in use by another account');
-          setSubmitting(false);
-          return;
-        }
-      }
-
-      // 3. Prepare payload, definitively excluding email if unchanged
       const payload = {
         name: formData.name.trim(),
         phone: formData.phone.trim(),
         role: formData.role
       };
 
-      if (isEmailChanged) {
-        payload.email = emailInput;
-      }
-
-      // 4. Proceed with save/update
       if (selectedUser) {
-        await pb.collection('users').update(selectedUser.id, payload, { $autoCancel: false });
+        await userService.update(selectedUser.id, payload);
         toast.success('Team member updated successfully');
         setFormOpen(false);
       } else {
@@ -174,34 +153,30 @@ const TeamManagementPage = () => {
         const generatedPassword = generateSecurePassword();
         const createPayload = {
           ...payload,
+          email: emailInput,
           password: generatedPassword,
-          passwordConfirm: generatedPassword
         };
-        
-        await pb.collection('users').create(createPayload, { $autoCancel: false });
-        
+
+        await userService.create(createPayload);
+
         // Show credentials dialog instead of just closing
         setNewMemberCredentials({
-          email: payload.email,
+          email: emailInput,
           password: generatedPassword,
           role: payload.role
         });
         toast.success('Team member added successfully.');
         setFormOpen(false);
       }
-      
+
       loadUsers();
     } catch (error) {
-      // 5. Handle API errors gracefully
-      let errorMessage = 'An unexpected error occurred';
-      
-      if (error.data?.data?.email?.message) {
-        errorMessage = error.data.data.email.message;
-        setEmailError('Email validation failed. Please check the email format or try a different email.');
-      } else if (error.message) {
-        errorMessage = error.message;
+      let errorMessage = error.message || 'An unexpected error occurred';
+
+      if (/email/i.test(errorMessage)) {
+        setEmailError(errorMessage);
       }
-      
+
       toast.error(`Failed to save team member: ${errorMessage}`);
     } finally {
       setSubmitting(false);
@@ -211,7 +186,7 @@ const TeamManagementPage = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to remove this team member? This action cannot be undone.')) {
       try {
-        await pb.collection('users').delete(id, { $autoCancel: false });
+        await userService.remove(id);
         toast.success('Team member removed');
         loadUsers();
       } catch (error) {
@@ -337,7 +312,7 @@ const TeamManagementPage = () => {
                         <Button variant="ghost" size="icon" onClick={() => handleOpenForm(user)} aria-label="Edit user">
                           <Pencil className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors" />
                         </Button>
-                        {user.id !== pb.authStore.model?.id && (
+                        {user.id !== currentUser?.id && (
                           <Button variant="ghost" size="icon" onClick={() => handleDelete(user.id)} aria-label="Delete user">
                             <Trash2 className="w-4 h-4 text-destructive/70 hover:text-destructive transition-colors" />
                           </Button>
@@ -392,13 +367,17 @@ const TeamManagementPage = () => {
               </Label>
               <Input
                 id="email"
-                type="email" 
+                type="email"
                 value={formData.email}
                 onChange={handleEmailChange}
                 required
-                className={`text-foreground ${emailError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                disabled={!!selectedUser}
+                className={`text-foreground ${selectedUser ? 'opacity-70 cursor-not-allowed' : ''} ${emailError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 placeholder="maya@thenarsis.com"
               />
+              {selectedUser && (
+                <p className="text-xs text-muted-foreground">Email address cannot be changed after creation.</p>
+              )}
               {emailError && (
                 <div className="flex items-center gap-1.5 mt-1 text-sm text-destructive font-medium animate-in fade-in slide-in-from-top-1">
                   <AlertCircle className="w-4 h-4" />

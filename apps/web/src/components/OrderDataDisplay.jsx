@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 const OrderDataDisplay = ({ order, assignmentDate, assignedBy }) => {
   if (!order) return null;
 
-  const product = order.expand?.product_id;
+  const product = order.product || order.expand?.product_id;
 
   return (
     <div className="space-y-6">

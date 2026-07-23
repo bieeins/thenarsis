@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button.jsx';
 import { Textarea } from '@/components/ui/textarea.jsx';
 import { Skeleton } from '@/components/ui/skeleton.jsx';
 import { toast } from 'sonner';
-import pb from '@/lib/pocketbaseClient.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import { noteService } from '@/services/noteService.js';
 
 const NotesSection = ({ orderId }) => {
   const { currentUser } = useAuth();
@@ -24,12 +24,11 @@ const NotesSection = ({ orderId }) => {
   const fetchNotes = async () => {
     try {
       setLoading(true);
-      const records = await pb.collection('notes').getList(1, 50, {
-        filter: `order_id = "${orderId}"`,
-        sort: '-created',
-        $autoCancel: false
-      });
-      setNotes(records.items);
+      const records = await noteService.listByOrder(orderId);
+      const sorted = [...records].sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
+      setNotes(sorted);
     } catch (error) {
       console.error('Error fetching notes:', error);
       toast.error('Failed to load notes');
@@ -44,15 +43,15 @@ const NotesSection = ({ orderId }) => {
 
     try {
       setSubmitting(true);
-      const record = await pb.collection('notes').create({
+      const res = await noteService.create({
         order_id: orderId,
         user_id: currentUser.id,
         user_role: currentUser.role,
         user_name: currentUser.name,
         note_content: newNote.trim(),
-      }, { $autoCancel: false });
-      
-      setNotes([record, ...notes]);
+      });
+
+      setNotes([res.data, ...notes]);
       setNewNote('');
       toast.success('Note added successfully');
     } catch (error) {
@@ -110,7 +109,7 @@ const NotesSection = ({ orderId }) => {
                   </span>
                 </div>
                 <span className="text-xs text-muted-foreground">
-                  {format(new Date(note.created), 'MMM d, yyyy • h:mm a')}
+                  {format(new Date(note.created_at), 'MMM d, yyyy • h:mm a')}
                 </span>
               </div>
               <p className="text-sm text-foreground/90 whitespace-pre-wrap">{note.note_content}</p>

@@ -16,8 +16,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import pb from '@/lib/pocketbaseClient';
 import { toast } from 'sonner';
+import { productService } from '@/services/productService.js';
 
 const ProductForm = ({ open, onOpenChange, product, onSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -59,10 +59,10 @@ const ProductForm = ({ open, onOpenChange, product, onSuccess }) => {
       };
 
       if (product) {
-        await pb.collection('products').update(product.id, data, { $autoCancel: false });
+        await productService.update(product.id, data);
         toast.success('Product updated successfully');
       } else {
-        await pb.collection('products').create(data, { $autoCancel: false });
+        await productService.create(data);
         toast.success('Product created successfully');
       }
 

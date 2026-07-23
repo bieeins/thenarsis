@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Share2, Download, Mail, Loader2, AlertCircle } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { invoiceService } from '@/services/invoiceService.js';
+import { orderService } from '@/services/orderService.js';
 
 const InvoiceViewPage = () => {
   const { invoiceNumber } = useParams();
@@ -25,28 +26,33 @@ const InvoiceViewPage = () => {
     setLoading(true);
     setError(false);
     try {
-      const invoiceRecords = await pb.collection('invoices').getFullList({
-        filter: `invoice_number = "${invoiceNumber}"`,
-        expand: 'order_id,order_id.product_id',
-        $autoCancel: false
-      });
+      const res = await invoiceService.getPublicByNumber(invoiceNumber);
+      const invoiceData = res.data;
 
-      if (!invoiceRecords || invoiceRecords.length === 0) {
+      if (!invoiceData) {
         toast.error('Invoice not found');
         setLoading(false);
         return;
       }
 
-      const invoiceData = invoiceRecords[0];
       setInvoice(invoiceData);
-      setOrder(invoiceData.expand?.order_id || null);
 
-      const paymentRecords = await pb.collection('payments').getFullList({
-        filter: `invoice_id = "${invoiceData.id}"`,
-        sort: '-payment_date',
-        $autoCancel: false
-      });
-      setPayments(paymentRecords || []);
+      const sortedPayments = [...(invoiceData.payments || [])].sort(
+        (a, b) => new Date(b.payment_date) - new Date(a.payment_date)
+      );
+      setPayments(sortedPayments);
+
+      // Order details require authentication, so this only resolves for a
+      // signed-in viewer (e.g. staff previewing the link); public customers
+      // will simply see the invoice/payment summary without event details.
+      if (invoiceData.order_id) {
+        try {
+          const orderRes = await orderService.get(invoiceData.order_id);
+          setOrder(orderRes.data);
+        } catch (orderErr) {
+          setOrder(null);
+        }
+      }
     } catch (err) {
       setError(true);
       toast.error('Failed to load invoice');
@@ -97,7 +103,7 @@ const InvoiceViewPage = () => {
     );
   }
 
-  if (!invoice || !order) {
+  if (!invoice) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/30">
         <Card className="max-w-md border-0 shadow-sm w-full">
@@ -109,6 +115,8 @@ const InvoiceViewPage = () => {
       </div>
     );
   }
+
+  const displayOrder = order || {};
 
   return (
     <>
@@ -152,12 +160,12 @@ const InvoiceViewPage = () => {
                   <p className="text-sm text-muted-foreground">Invoice Number</p>
                   <p className="font-bold text-lg mb-4">{invoice.invoice_number}</p>
                   <p className="text-sm text-muted-foreground">Date Issued</p>
-                  <p className="font-medium">{invoice.created ? format(new Date(invoice.created), 'MMMM dd, yyyy') : 'N/A'}</p>
+                  <p className="font-medium">{invoice.created_at ? format(new Date(invoice.created_at), 'MMMM dd, yyyy') : 'N/A'}</p>
                 </div>
                 <div className="sm:text-right">
                   <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Bill To</h2>
-                  <p className="font-bold text-xl mb-1">{order.customer_name || 'Customer'}</p>
-                  <p className="text-sm text-muted-foreground">{order.phone_number || '-'}</p>
+                  <p className="font-bold text-xl mb-1">{displayOrder.customer_name || 'Customer'}</p>
+                  <p className="text-sm text-muted-foreground">{displayOrder.phone_number || '-'}</p>
                 </div>
               </div>
 
@@ -168,15 +176,15 @@ const InvoiceViewPage = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-muted/20 p-6 rounded-xl border">
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Event Name</p>
-                    <p className="font-semibold text-lg">{order.event_name || 'Unnamed Event'}</p>
+                    <p className="font-semibold text-lg">{displayOrder.event_name || 'Unnamed Event'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Event Date</p>
-                    <p className="font-medium">{order.event_date ? format(new Date(order.event_date), 'MMMM dd, yyyy') : 'TBD'}</p>
+                    <p className="font-medium">{displayOrder.event_date ? format(new Date(displayOrder.event_date), 'MMMM dd, yyyy') : 'TBD'}</p>
                   </div>
                   <div className="sm:col-span-2">
                     <p className="text-sm text-muted-foreground mb-1">Location</p>
-                    <p className="font-medium">{order.event_location || 'TBD'}</p>
+                    <p className="font-medium">{displayOrder.event_location || 'TBD'}</p>
                   </div>
                 </div>
               </div>
@@ -194,8 +202,8 @@ const InvoiceViewPage = () => {
                   <tbody>
                     <tr>
                       <td className="py-4">
-                        <p className="font-semibold">{order.expand?.product_id?.package_name || 'Custom Package'}</p>
-                        <p className="text-sm text-muted-foreground line-clamp-2 max-w-md">{order.expand?.product_id?.description?.replace(/<[^>]*>?/gm, '') || ''}</p>
+                        <p className="font-semibold">{displayOrder.product?.package_name || 'Custom Package'}</p>
+                        <p className="text-sm text-muted-foreground line-clamp-2 max-w-md">{displayOrder.product?.description?.replace(/<[^>]*>?/gm, '') || ''}</p>
                       </td>
                       <td className="py-4 text-right font-numeric font-semibold text-lg">
                         IDR {(invoice.total_amount || 0).toLocaleString()}

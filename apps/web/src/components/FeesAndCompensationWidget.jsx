@@ -6,7 +6,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Search, ArrowUpDown, Loader2, Palette, Users, Download, Filter, X } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient';
+import { designIncomeService } from '@/services/designIncomeService.js';
+import { crewAssignmentService } from '@/services/crewAssignmentService.js';
+import { orderService } from '@/services/orderService.js';
+import { invoiceService } from '@/services/invoiceService.js';
 import { format, subDays, startOfMonth, startOfYear, isAfter, isBefore } from 'date-fns';
 import { toast } from 'sonner';
 import DesignFeeDetailModal from './DesignFeeDetailModal.jsx';
@@ -41,10 +44,10 @@ const FeesAndCompensationWidget = () => {
     setLoading(true);
     try {
       const [feesRes, crewRes, ordersRes, invoicesRes] = await Promise.all([
-        pb.collection('design_income').getFullList({ expand: 'order_id,designer_id', sort: '-created', $autoCancel: false }),
-        pb.collection('crew_assignments').getFullList({ expand: 'order_id,crew_id', sort: '-created', $autoCancel: false }),
-        pb.collection('orders').getFullList({ $autoCancel: false }),
-        pb.collection('invoices').getFullList({ $autoCancel: false })
+        designIncomeService.listAll({ sort: 'created_at', order: 'desc' }),
+        crewAssignmentService.listAll({ sort: 'created_at', order: 'desc' }),
+        orderService.listAll(),
+        invoiceService.listAll(),
       ]);
 
       // Map invoice totals to orders for gross revenue calculation
@@ -52,8 +55,16 @@ const FeesAndCompensationWidget = () => {
         const invoice = invoicesRes.find(inv => inv.order_id === order.id);
         return { ...order, totalAmount: invoice ? invoice.total_amount : 0 };
       });
+      const orderMap = new Map(ordersWithTotals.map((o) => [o.id, o]));
 
-      setDesignFees(feesRes);
+      // design_income rows aren't expanded with their order server-side —
+      // attach it client-side using the orders we already fetched.
+      const feesWithOrder = feesRes.map((fee) => ({
+        ...fee,
+        order: orderMap.get(fee.order_id) || null,
+      }));
+
+      setDesignFees(feesWithOrder);
       setCrewAssignments(crewRes);
       setOrders(ordersWithTotals);
     } catch (error) {
@@ -87,9 +98,9 @@ const FeesAndCompensationWidget = () => {
       if (statusFilter !== 'All' && fee.status !== statusFilter) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
-        if (!fee.designer_name?.toLowerCase().includes(q) && !fee.expand?.order_id?.event_name?.toLowerCase().includes(q)) return false;
+        if (!fee.designer_name?.toLowerCase().includes(q) && !fee.order?.event_name?.toLowerCase().includes(q)) return false;
       }
-      if (!isDateInRange(fee.created)) return false;
+      if (!isDateInRange(fee.created_at)) return false;
       return true;
     });
   }, [designFees, statusFilter, searchQuery, datePreset, customStartDate, customEndDate]);
@@ -100,9 +111,9 @@ const FeesAndCompensationWidget = () => {
       if (statusFilter !== 'All' && status !== statusFilter) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
-        if (!crew.expand?.crew_id?.name?.toLowerCase().includes(q) && !crew.expand?.order_id?.event_name?.toLowerCase().includes(q)) return false;
+        if (!crew.crew?.name?.toLowerCase().includes(q) && !crew.order?.event_name?.toLowerCase().includes(q)) return false;
       }
-      if (!isDateInRange(crew.created)) return false;
+      if (!isDateInRange(crew.created_at)) return false;
       return true;
     });
   }, [crewAssignments, statusFilter, searchQuery, datePreset, customStartDate, customEndDate]);
@@ -121,7 +132,7 @@ const FeesAndCompensationWidget = () => {
     filteredDesignFees.forEach(f => {
       const amt = f.fee_amount || 0;
       total += amt;
-      if (isAfter(new Date(f.created), startOfMonth(now))) month += amt;
+      if (isAfter(new Date(f.created_at), startOfMonth(now))) month += amt;
       if (f.status === 'pending') submitted++;
       else if (f.status === 'approved') approved++;
       else if (f.status === 'paid') paid++;
@@ -135,8 +146,8 @@ const FeesAndCompensationWidget = () => {
     filteredCrewAssignments.forEach(c => {
       const amt = c.attendance_amount || 0;
       totalAmt += amt;
-      if (isAfter(new Date(c.created), startOfMonth(now))) monthAmt += amt;
-      if (isAfter(new Date(c.created), startOfYear(now))) yearAmt += amt;
+      if (isAfter(new Date(c.created_at), startOfMonth(now))) monthAmt += amt;
+      if (isAfter(new Date(c.created_at), startOfYear(now))) yearAmt += amt;
       
       const status = c.attendance_status || 'belum_jawab';
       if (status === 'hadir') hadir++;
@@ -388,9 +399,9 @@ const FeesAndCompensationWidget = () => {
                         filteredDesignFees.map((fee) => (
                           <tr key={fee.id} onClick={() => setSelectedFee(fee)} className="border-b last:border-0 hover:bg-muted/30 cursor-pointer transition-colors">
                             <td className="px-4 py-3 font-medium">{fee.designer_name}</td>
-                            <td className="px-4 py-3 text-muted-foreground truncate max-w-[200px]">{fee.expand?.order_id?.event_name || 'N/A'}</td>
+                            <td className="px-4 py-3 text-muted-foreground truncate max-w-[200px]">{fee.order?.event_name || 'N/A'}</td>
                             <td className="px-4 py-3 text-right font-numeric font-medium">Rp {fee.fee_amount?.toLocaleString('id-ID')}</td>
-                            <td className="px-4 py-3 text-muted-foreground">{format(new Date(fee.created), 'MMM dd, yyyy')}</td>
+                            <td className="px-4 py-3 text-muted-foreground">{format(new Date(fee.created_at), 'MMM dd, yyyy')}</td>
                             <td className="px-4 py-3 text-center">{getFeeBadge(fee.status)}</td>
                           </tr>
                         ))
@@ -447,9 +458,9 @@ const FeesAndCompensationWidget = () => {
                       ) : (
                         filteredCrewAssignments.map((assignment) => (
                           <tr key={assignment.id} onClick={() => setSelectedAssignment(assignment)} className="border-b last:border-0 hover:bg-muted/30 cursor-pointer transition-colors">
-                            <td className="px-4 py-3 font-medium">{assignment.expand?.crew_id?.name || 'Unknown'}</td>
-                            <td className="px-4 py-3 text-muted-foreground truncate max-w-[150px]">{assignment.expand?.order_id?.event_name || 'N/A'}</td>
-                            <td className="px-4 py-3 text-muted-foreground">{assignment.expand?.order_id?.event_date ? format(new Date(assignment.expand?.order_id?.event_date), 'MMM dd, yyyy') : '-'}</td>
+                            <td className="px-4 py-3 font-medium">{assignment.crew?.name || 'Unknown'}</td>
+                            <td className="px-4 py-3 text-muted-foreground truncate max-w-[150px]">{assignment.order?.event_name || 'N/A'}</td>
+                            <td className="px-4 py-3 text-muted-foreground">{assignment.order?.event_date ? format(new Date(assignment.order?.event_date), 'MMM dd, yyyy') : '-'}</td>
                             <td className="px-4 py-3 text-center">{getAttendanceBadge(assignment.attendance_status || 'belum_jawab')}</td>
                             <td className="px-4 py-3 text-right font-numeric font-medium">
                               {assignment.attendance_amount ? `Rp ${assignment.attendance_amount.toLocaleString('id-ID')}` : '-'}

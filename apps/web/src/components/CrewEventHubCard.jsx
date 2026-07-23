@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge.jsx';
 import { Checkbox } from '@/components/ui/checkbox.jsx';
 import { MapPin, Calendar, Clock, User, Banknote, ChevronRight, Package, CreditCard, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import pb from '@/lib/pocketbaseClient.js';
+import { crewAssignmentService } from '@/services/crewAssignmentService.js';
 import { cn } from '@/lib/utils.js';
 
 const CrewEventHubCard = ({ event }) => {
@@ -33,11 +33,11 @@ const CrewEventHubCard = ({ event }) => {
 
     setSaving(true);
     try {
-      await pb.collection('crew_assignments').update(event.crew_assignment_id, {
+      await crewAssignmentService.update(event.crew_assignment_id, {
         attendance_status: newStatus,
         attendance_date: new Date().toISOString()
-      }, { $autoCancel: false });
-      
+      });
+
       toast.success(`Attendance marked as ${newStatus}`);
     } catch (err) {
       console.error('Error toggling attendance:', err);

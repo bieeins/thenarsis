@@ -1,13 +1,12 @@
-import pb from '@/lib/pocketbaseClient.js';
+import { crewAssignmentService } from '@/services/crewAssignmentService.js';
+import { orderService } from '@/services/orderService.js';
+import { getAccessToken } from '@/lib/apiClient.js';
 
 export const logCrewAssignments = async () => {
   console.group('🔍 [Debug] logCrewAssignments');
   try {
     console.log('Fetching all crew_assignments...');
-    const records = await pb.collection('crew_assignments').getFullList({
-      expand: 'order_id,crew_id,assigned_by',
-      $autoCancel: false
-    });
+    const records = await crewAssignmentService.listAll();
     console.log(`Found ${records.length} crew_assignments.`);
     console.table(records.map(r => ({
       id: r.id,
@@ -28,10 +27,7 @@ export const logOrders = async () => {
   console.group('🔍 [Debug] logOrders');
   try {
     console.log('Fetching all orders...');
-    const records = await pb.collection('orders').getFullList({
-      expand: 'product_id,assigned_designer_id',
-      $autoCancel: false
-    });
+    const records = await orderService.listAll();
     console.log(`Found ${records.length} orders.`);
     console.table(records.map(r => ({
       id: r.id,
@@ -49,14 +45,11 @@ export const logOrders = async () => {
 
 export const logCurrentUser = () => {
   console.group('🔍 [Debug] logCurrentUser');
-  const user = pb.authStore.model;
-  if (!user) {
+  const hasToken = Boolean(getAccessToken());
+  if (!hasToken) {
     console.warn('No user is currently authenticated.');
   } else {
-    console.log('Authenticated User ID:', user.id);
-    console.log('Authenticated User Role:', user.role);
-    console.log('Authenticated User Email:', user.email);
-    console.log('Full user object:', user);
+    console.log('An access token is present. Inspect useAuth().currentUser from React devtools for full details.');
   }
   console.groupEnd();
 };
@@ -71,11 +64,7 @@ export const verifyCrewData = async (crew_id) => {
 
   try {
     console.log(`Verifying assignments for crew_id="${crew_id}"...`);
-    const assignments = await pb.collection('crew_assignments').getFullList({
-      filter: `crew_id="${crew_id}"`,
-      expand: 'order_id',
-      $autoCancel: false
-    });
+    const assignments = await crewAssignmentService.listAll({ crewId: crew_id });
 
     console.log(`Found ${assignments.length} assignments for this crew member.`);
     if (assignments.length === 0) {
@@ -84,8 +73,8 @@ export const verifyCrewData = async (crew_id) => {
       let validOrders = 0;
       let orphaned = 0;
 
-      assignments.forEach((assignment, index) => {
-        const order = assignment.expand?.order_id;
+      assignments.forEach((assignment) => {
+        const order = assignment.order;
         if (order) {
           validOrders++;
           console.log(`[Valid] Assignment ${assignment.id} maps to Order ${order.id} (${order.event_name})`);

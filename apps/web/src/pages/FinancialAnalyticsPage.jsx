@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import FinancialNavigation from '@/components/FinancialNavigation';
-import pb from '@/lib/pocketbaseClient';
 import { toast } from 'sonner';
+import { orderService } from '@/services/orderService.js';
+import { paymentService } from '@/services/paymentService.js';
+import { expenseService } from '@/services/expenseService.js';
 
 const FinancialAnalyticsPage = () => {
   const [data, setData] = useState(null);
@@ -16,9 +18,9 @@ const FinancialAnalyticsPage = () => {
   const loadData = async () => {
     try {
       const [orders, payments, expenses] = await Promise.all([
-        pb.collection('orders').getFullList({ $autoCancel: false }),
-        pb.collection('payments').getFullList({ filter: "payment_status = 'Confirmed'", $autoCancel: false }),
-        pb.collection('expenses').getFullList({ $autoCancel: false })
+        orderService.listAll(),
+        paymentService.listAll({ status: 'Confirmed' }),
+        expenseService.listAll(),
       ]);
 
       const rev = payments.reduce((sum, p) => sum + p.amount, 0);

@@ -14,8 +14,11 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Eye, RefreshCw } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient';
 import { toast } from 'sonner';
+import { orderService } from '@/services/orderService.js';
+import { invoiceService } from '@/services/invoiceService.js';
+import { paymentService } from '@/services/paymentService.js';
+import { crewAssignmentService } from '@/services/crewAssignmentService.js';
 import { format } from 'date-fns';
 import OrderForm from '@/components/OrderForm';
 import AssignDesignerModal from '@/components/AssignDesignerModal';
@@ -39,45 +42,48 @@ const OrderManagementPage = () => {
     setLoading(true);
     setError(false);
     try {
-      const records = await pb.collection('orders').getFullList({
-        sort: '-created',
-        expand: 'product_id,assigned_designer_id',
-        $autoCancel: false
+      const [records, invoices, payments, crewAssignments] = await Promise.all([
+        orderService.listAll({ sort: 'created_at', order: 'desc' }),
+        invoiceService.listAll(),
+        paymentService.listAll(),
+        crewAssignmentService.listAll(),
+      ]);
+
+      const invoicesByOrder = new Map();
+      invoices.forEach((inv) => {
+        if (!invoicesByOrder.has(inv.order_id)) invoicesByOrder.set(inv.order_id, []);
+        invoicesByOrder.get(inv.order_id).push(inv);
       });
-      
-      const ordersEnhanced = await Promise.all(
-        records.map(async (order) => {
-          // Fetch associated invoices & payments
-          const invoices = await pb.collection('invoices').getFullList({
-            filter: `order_id = "${order.id}"`,
-            $autoCancel: false
-          });
-          
-          let totalPayments = 0;
-          if (invoices.length > 0) {
-            const payments = await pb.collection('payments').getFullList({
-              filter: `invoice_id = "${invoices[0].id}"`,
-              $autoCancel: false
-            });
-            totalPayments = payments.reduce((sum, p) => p.payment_status === 'Confirmed' ? sum + p.amount : sum, 0);
-          }
 
-          // Fetch Crew Assignments
-          const crewAssignments = await pb.collection('crew_assignments').getFullList({
-            filter: `order_id = "${order.id}"`,
-            expand: 'crew_id',
-            $autoCancel: false
-          });
+      const paymentsByInvoice = new Map();
+      payments.forEach((p) => {
+        if (!paymentsByInvoice.has(p.invoice_id)) paymentsByInvoice.set(p.invoice_id, []);
+        paymentsByInvoice.get(p.invoice_id).push(p);
+      });
 
-          return {
-            ...order,
-            totalAmount: invoices[0]?.total_amount || 0,
-            paymentsReceived: totalPayments,
-            crew: crewAssignments.map(ca => ca.expand?.crew_id?.name).filter(Boolean)
-          };
-        })
-      );
-      
+      const crewByOrder = new Map();
+      crewAssignments.forEach((ca) => {
+        if (!crewByOrder.has(ca.order_id)) crewByOrder.set(ca.order_id, []);
+        if (ca.crew?.name) crewByOrder.get(ca.order_id).push(ca.crew.name);
+      });
+
+      const ordersEnhanced = records.map((order) => {
+        const orderInvoices = invoicesByOrder.get(order.id) || [];
+        const firstInvoice = orderInvoices[0];
+        const invoicePayments = firstInvoice ? paymentsByInvoice.get(firstInvoice.id) || [] : [];
+        const totalPayments = invoicePayments.reduce(
+          (sum, p) => (p.payment_status === 'Confirmed' ? sum + p.amount : sum),
+          0
+        );
+
+        return {
+          ...order,
+          totalAmount: firstInvoice?.total_amount || 0,
+          paymentsReceived: totalPayments,
+          crew: crewByOrder.get(order.id) || [],
+        };
+      });
+
       setOrders(ordersEnhanced);
     } catch (err) {
       toast.error('Failed to load orders');
@@ -190,9 +196,9 @@ const OrderManagementPage = () => {
                           </TableCell>
                           
                           <TableCell>
-                            {order.expand?.assigned_designer_id ? (
+                            {order.assigned_designer ? (
                               <div className="badge-assigned">
-                                {order.expand.assigned_designer_id.name}
+                                {order.assigned_designer.name}
                               </div>
                             ) : (
                               <div className="flex flex-col gap-2 items-start">

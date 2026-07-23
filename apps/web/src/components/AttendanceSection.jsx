@@ -5,8 +5,8 @@ import { Checkbox } from '@/components/ui/checkbox.jsx';
 import { Separator } from '@/components/ui/separator.jsx';
 import { CheckCircle2, Banknote, Clock, ClipboardSignature, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-import pb from '@/lib/pocketbaseClient.js';
 import { toast } from 'sonner';
+import { crewAssignmentService } from '@/services/crewAssignmentService.js';
 
 const AttendanceSection = ({ 
   assignmentId, 
@@ -47,13 +47,13 @@ const AttendanceSection = ({
     setLoading(true);
     try {
       const newStatus = checked ? 'confirmed' : 'pending';
-      const updated = await pb.collection('crew_assignments').update(assignmentId, {
+      const res = await crewAssignmentService.update(assignmentId, {
         attendance_status: newStatus,
         attendance_date: new Date().toISOString()
-      }, { $autoCancel: false });
-      
+      });
+
       toast.success(`Attendance marked as ${newStatus}`);
-      if (onStatusChange) onStatusChange(updated);
+      if (onStatusChange) onStatusChange(res.data);
     } catch (err) {
       console.error('Error updating attendance:', err);
       toast.error('Failed to update attendance status.');

@@ -19,10 +19,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import pb from '@/lib/pocketbaseClient';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { CreditCard, Download, FileText, Send, Share2, CheckCircle2 } from 'lucide-react';
+import { invoiceService } from '@/services/invoiceService.js';
+import { paymentService } from '@/services/paymentService.js';
+import { orderService } from '@/services/orderService.js';
 
 const PaymentTrackingPage = () => {
   const [invoices, setInvoices] = useState([]);
@@ -46,27 +48,25 @@ const PaymentTrackingPage = () => {
 
   const loadInvoices = async () => {
     try {
-      const records = await pb.collection('invoices').getFullList({
-        expand: 'order_id,order_id.product_id',
-        sort: '-created',
-        $autoCancel: false
-      });
+      const [records, allPayments, orders] = await Promise.all([
+        invoiceService.listAll({ sort: 'created_at', order: 'desc' }),
+        paymentService.listAll(),
+        orderService.listAll(),
+      ]);
 
-      const invoicesWithPayments = await Promise.all(
-        records.map(async (invoice) => {
-          const payments = await pb.collection('payments').getFullList({
-            filter: `invoice_id = "${invoice.id}"`,
-            $autoCancel: false
-          });
-          const totalPaid = payments.reduce((sum, p) => p.payment_status === 'Confirmed' ? sum + p.amount : sum, 0);
-          return {
-            ...invoice,
-            payments,
-            totalPaid,
-            remainingBalance: invoice.total_amount - totalPaid
-          };
-        })
-      );
+      const orderMap = new Map(orders.map((o) => [o.id, o]));
+
+      const invoicesWithPayments = records.map((invoice) => {
+        const payments = allPayments.filter((p) => p.invoice_id === invoice.id);
+        const totalPaid = payments.reduce((sum, p) => p.payment_status === 'Confirmed' ? sum + p.amount : sum, 0);
+        return {
+          ...invoice,
+          order: orderMap.get(invoice.order_id) || null,
+          payments,
+          totalPaid,
+          remainingBalance: invoice.total_amount - totalPaid
+        };
+      });
 
       setInvoices(invoicesWithPayments);
     } catch (error) {
@@ -110,14 +110,14 @@ const PaymentTrackingPage = () => {
 
   const executePaymentSave = async (data) => {
     try {
-      await pb.collection('payments').create({
+      await paymentService.create({
         invoice_id: selectedInvoice.id,
         amount: parseFloat(data.amount),
         payment_date: data.payment_date + ' 12:00:00.000Z',
         payment_method: data.payment_method,
         payment_status: data.payment_status,
         notes: data.notes
-      }, { $autoCancel: false });
+      });
 
       toast.success('Payment recorded successfully');
       setFormOpen(false);
@@ -150,21 +150,21 @@ const PaymentTrackingPage = () => {
             <div style="text-align: right;">
                <h2 style="font-size: 24px; margin: 0; color: #FBBF24;">INVOICE</h2>
                <p>#${invoice.invoice_number}</p>
-               <p>${format(new Date(invoice.created), 'MMM dd, yyyy')}</p>
+               <p>${format(new Date(invoice.created_at), 'MMM dd, yyyy')}</p>
             </div>
           </div>
           
           <div style="display: flex; justify-content: space-between; margin-top: 40px;">
             <div>
               <h3 style="margin-bottom: 10px; color: #333;">Billed To:</h3>
-              <p style="font-weight: bold; margin: 0;">${invoice.expand?.order_id?.customer_name}</p>
-              <p style="margin: 5px 0;">${invoice.expand?.order_id?.phone_number}</p>
+              <p style="font-weight: bold; margin: 0;">${invoice.order?.customer_name}</p>
+              <p style="margin: 5px 0;">${invoice.order?.phone_number}</p>
             </div>
             <div style="text-align: right;">
               <h3 style="margin-bottom: 10px; color: #333;">Event Details:</h3>
-              <p style="margin: 0;">${invoice.expand?.order_id?.event_name}</p>
-              <p style="margin: 5px 0;">${format(new Date(invoice.expand?.order_id?.event_date), 'MMM dd, yyyy')}</p>
-              <p style="margin: 0;">${invoice.expand?.order_id?.event_location}</p>
+              <p style="margin: 0;">${invoice.order?.event_name}</p>
+              <p style="margin: 5px 0;">${format(new Date(invoice.order?.event_date), 'MMM dd, yyyy')}</p>
+              <p style="margin: 0;">${invoice.order?.event_location}</p>
             </div>
           </div>
 
@@ -178,7 +178,7 @@ const PaymentTrackingPage = () => {
             <tbody>
               <tr>
                 <td style="padding: 12px; border-bottom: 1px solid #eee;">
-                  <strong>${invoice.expand?.order_id?.expand?.product_id?.package_name || 'Event Package'}</strong>
+                  <strong>${invoice.order?.product?.package_name || 'Event Package'}</strong>
                 </td>
                 <td style="padding: 12px; text-align: right; border-bottom: 1px solid #eee;">
                   IDR ${invoice.total_amount.toLocaleString()}
@@ -260,7 +260,7 @@ const PaymentTrackingPage = () => {
                     <div>
                       <CardTitle className="text-lg">{invoice.invoice_number}</CardTitle>
                       <CardDescription className="text-secondary-foreground/70">
-                        {invoice.expand?.order_id?.customer_name}
+                        {invoice.order?.customer_name}
                       </CardDescription>
                     </div>
                     <Badge variant="outline" className="bg-white/10 border-white/20 text-white">

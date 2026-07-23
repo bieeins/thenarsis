@@ -15,8 +15,11 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { ArrowLeft, Save, Link as LinkIcon, ExternalLink, Activity, Clock, User, Banknote, Loader2, AlertCircle, FileText, Image as ImageIcon } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import { designWorkService } from '@/services/designWorkService.js';
+import { designIncomeService } from '@/services/designIncomeService.js';
+import { orderService } from '@/services/orderService.js';
+import { userService } from '@/services/userService.js';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import OrderDataDisplay from '@/components/OrderDataDisplay.jsx';
@@ -27,6 +30,7 @@ const DesignWorkDetail = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const [work, setWork] = useState(null);
+  const [assignedByName, setAssignedByName] = useState('Unknown User');
   const [incomeRecord, setIncomeRecord] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -50,12 +54,31 @@ const DesignWorkDetail = () => {
     setLoading(true);
     setError(false);
     try {
-      const record = await pb.collection('design_work').getOne(id, {
-        expand: 'order_id,order_id.product_id,assigned_by',
-        $autoCancel: false
-      });
+      const res = await designWorkService.get(id);
+      let record = res.data;
+
+      // design_work.order is not expanded with its product, so fetch the
+      // order separately (orderService expands .product automatically).
+      if (record?.order_id) {
+        try {
+          const orderRes = await orderService.get(record.order_id);
+          record = { ...record, order: orderRes.data };
+        } catch (orderErr) {
+          console.error('Failed to load related order:', orderErr);
+        }
+      }
+
       setWork(record || null);
-      
+
+      if (record?.assigned_by) {
+        try {
+          const userRes = await userService.get(record.assigned_by);
+          setAssignedByName(userRes.data?.name || 'Unknown User');
+        } catch (userErr) {
+          setAssignedByName('Unknown User');
+        }
+      }
+
       setFormData({
         status: record?.status || 'pending',
         design_notes: record?.design_notes || '',
@@ -69,9 +92,10 @@ const DesignWorkDetail = () => {
       setFeeAmount(record?.design_fee ? String(record.design_fee) : '');
 
       if (record?.order_id && record?.designer_id) {
-        const income = await pb.collection('design_income').getFirstListItem(`order_id="${record.order_id}" && designer_id="${record.designer_id}"`, {
-          $autoCancel: false
-        }).catch(() => null);
+        const incomeRes = await designIncomeService
+          .list({ designerId: record.designer_id })
+          .catch(() => null);
+        const income = incomeRes?.data?.find((i) => i.order_id === record.order_id) || null;
         setIncomeRecord(income);
       }
     } catch (err) {
@@ -111,7 +135,7 @@ const DesignWorkDetail = () => {
         design_file_link: linkValidation.url || ''
       };
 
-      await pb.collection('design_work').update(id, payload, { $autoCancel: false });
+      await designWorkService.update(id, payload);
       
       if (formData.status === 'completed' && work.status !== 'completed') {
         toast.success('Project marked as Completed!');
@@ -137,23 +161,23 @@ const DesignWorkDetail = () => {
     setSavingFee(true);
     try {
       const submitDate = new Date().toISOString();
-      await pb.collection('design_work').update(id, {
+      await designWorkService.update(id, {
         design_fee: feeNum,
         fee_submitted_date: submitDate
-      }, { $autoCancel: false });
+      });
 
       if (incomeRecord) {
-        await pb.collection('design_income').update(incomeRecord.id, {
+        await designIncomeService.update(incomeRecord.id, {
           fee_amount: feeNum
-        }, { $autoCancel: false });
+        });
       } else if (currentUser) {
-        await pb.collection('design_income').create({
+        await designIncomeService.create({
           order_id: work.order_id,
           designer_id: currentUser.id,
           designer_name: currentUser.name || 'Unknown',
           fee_amount: feeNum,
           status: 'pending'
-        }, { $autoCancel: false });
+        });
       }
 
       toast.success('Design fee submitted successfully');
@@ -176,7 +200,7 @@ const DesignWorkDetail = () => {
     );
   }
 
-  if (error || !work || !work.expand?.order_id) {
+  if (error || !work || !work.order) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/30">
         <div className="bg-card border rounded-xl p-8 max-w-md w-full text-center shadow-sm">
@@ -192,8 +216,8 @@ const DesignWorkDetail = () => {
     );
   }
 
-  const order = work.expand?.order_id;
-  const assignedBy = work.expand?.assigned_by?.name || 'Unknown User';
+  const order = work.order;
+  const assignedBy = assignedByName;
   const savedLinkDetails = validateAndFormatDesignLink(work.design_file_link);
 
   return (

@@ -15,24 +15,37 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu.jsx';
 import { Menu, LogOut, User, Bell, CalendarDays, Home, LayoutDashboard, Briefcase, Calendar, Eye, List } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient.js';
 import { useNotifications } from '@/hooks/useNotifications.js';
+import { fileService } from '@/services/fileService.js';
 
 const Header = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const { unreadCount } = useNotifications();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState('');
 
   useEffect(() => {
-    console.log(`[Header] Path changed to: ${location.pathname}`);
-  }, [location.pathname]);
+    let objectUrl;
+    if (currentUser?.avatar) {
+      fileService
+        .getObjectUrl(currentUser.avatar)
+        .then((url) => {
+          objectUrl = url;
+          setAvatarUrl(url);
+        })
+        .catch(() => setAvatarUrl(''));
+    } else {
+      setAvatarUrl('');
+    }
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [currentUser?.avatar]);
 
   const handleLogout = () => {
-    console.log('[Header] Logging out');
-    pb.authStore.clear();
-    window.location.href = '/login';
+    logout();
   };
 
   const getNavLinks = () => {
@@ -183,7 +196,7 @@ const Header = () => {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-9 w-9 rounded-xl ml-1 p-0 overflow-hidden">
                     <Avatar className="h-9 w-9 border border-border rounded-xl">
-                      <AvatarImage src={currentUser.avatar ? pb.files.getURL(currentUser, currentUser.avatar) : ''} alt={currentUser.name} />
+                      <AvatarImage src={avatarUrl} alt={currentUser.name} />
                       <AvatarFallback className="bg-[hsl(var(--accent-yellow))]/20 text-[hsl(var(--accent-yellow-active))] font-bold rounded-xl">
                         {currentUser.name?.substring(0, 2).toUpperCase() || 'U'}
                       </AvatarFallback>

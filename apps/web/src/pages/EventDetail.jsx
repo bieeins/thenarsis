@@ -6,8 +6,9 @@ import { Label } from '@/components/ui/label.jsx';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card.jsx';
 import { Separator } from '@/components/ui/separator.jsx';
 import { ArrowLeft, Calendar, MapPin, User, FileText, Wallet, CheckCircle2, Link as LinkIcon, ExternalLink, Image as ImageIcon } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient.js';
 import { toast } from 'sonner';
+import { crewAssignmentService } from '@/services/crewAssignmentService.js';
+import { designWorkService } from '@/services/designWorkService.js';
 import { format } from 'date-fns';
 import { validateAndFormatDesignLink } from '@/lib/validateAndFormatDesignLink.js';
 
@@ -24,17 +25,13 @@ const EventDetail = () => {
 
   const loadEventDetail = async () => {
     try {
-      const record = await pb.collection('crew_assignments').getOne(id, {
-        expand: 'order_id,order_id.product_id',
-        $autoCancel: false
-      });
+      const res = await crewAssignmentService.get(id);
+      const record = res.data;
       setAssignment(record);
 
       if (record.order_id) {
-        const dWork = await pb.collection('design_work').getFirstListItem(`order_id="${record.order_id}"`, {
-          $autoCancel: false
-        }).catch(() => null);
-        setDesignWork(dWork);
+        const dWorkRes = await designWorkService.list({ orderId: record.order_id }).catch(() => null);
+        setDesignWork(dWorkRes?.data?.[0] || null);
       }
     } catch (error) {
       toast.error('Failed to load event details');
@@ -52,8 +49,8 @@ const EventDetail = () => {
     );
   }
 
-  const order = assignment.expand?.order_id;
-  const product = order?.expand?.product_id;
+  const order = assignment.order;
+  const product = order?.product;
   const designLinkInfo = designWork?.design_file_link ? validateAndFormatDesignLink(designWork.design_file_link) : null;
 
   return (

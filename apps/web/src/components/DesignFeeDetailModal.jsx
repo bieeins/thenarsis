@@ -5,8 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, AlertTriangle } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient';
 import { toast } from 'sonner';
+import { designIncomeService } from '@/services/designIncomeService.js';
 import { format } from 'date-fns';
 
 const DesignFeeDetailModal = ({ isOpen, onClose, feeRecord, onSave }) => {
@@ -39,13 +39,13 @@ const DesignFeeDetailModal = ({ isOpen, onClose, feeRecord, onSave }) => {
   const handleConfirmSave = async () => {
     setIsSubmitting(true);
     try {
-      const updated = await pb.collection('design_income').update(feeRecord.id, {
+      const res = await designIncomeService.update(feeRecord.id, {
         fee_amount: Number(amount),
         status: status
-      }, { $autoCancel: false });
-      
+      });
+
       toast.success('Design fee updated successfully');
-      if (onSave) onSave(updated);
+      if (onSave) onSave(res.data);
       onClose();
     } catch (error) {
       console.error('Error updating fee:', error);
@@ -77,13 +77,13 @@ const DesignFeeDetailModal = ({ isOpen, onClose, feeRecord, onSave }) => {
             <div className="grid grid-cols-4 items-center gap-4">
               <Label className="text-right text-muted-foreground">Event</Label>
               <div className="col-span-3 font-medium truncate">
-                {feeRecord.expand?.order_id?.event_name || 'Unknown Event'}
+                {feeRecord.order?.event_name || 'Unknown Event'}
               </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label className="text-right text-muted-foreground">Submitted</Label>
               <div className="col-span-3 text-sm">
-                {feeRecord.created ? format(new Date(feeRecord.created), 'MMM dd, yyyy HH:mm') : 'N/A'}
+                {feeRecord.created_at ? format(new Date(feeRecord.created_at), 'MMM dd, yyyy HH:mm') : 'N/A'}
               </div>
             </div>
             

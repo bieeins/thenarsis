@@ -3,10 +3,18 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently --kill-others --raw \"npm run dev --prefix apps/web\" \"npm run dev --prefix apps/pocketbase\"",
-    "build": "concurrently --raw \"npm run build --prefix apps/web\"",
-    "start": "concurrently --kill-others --raw \"npm run start --prefix apps/pocketbase\"",
-    "lint": "concurrently --raw \"npm run lint --prefix apps/web\""
+    "dev": "concurrently --kill-others --raw --names web,api -c blue,green \"npm run dev --prefix apps/web\" \"npm run dev --prefix apps/api\"",
+    "dev:web": "npm run dev --prefix apps/web",
+    "dev:api": "npm run dev --prefix apps/api",
+    "build": "npm run build:api && npm run build:web",
+    "build:web": "npm run build --prefix apps/web",
+    "build:api": "npm run build --prefix apps/api",
+    "start:api": "npm run start --prefix apps/api",
+    "db:migrate": "npm run db:migrate --prefix apps/api",
+    "db:rollback": "npm run db:rollback --prefix apps/api",
+    "db:seed": "npm run db:seed --prefix apps/api",
+    "test": "npm run test --prefix apps/api",
+    "lint": "concurrently --raw \"npm run lint --prefix apps/web\" \"npm run lint --prefix apps/api\""
   },
   "devDependencies": {
     "concurrently": "^10.0.3"

@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import pb from '@/lib/pocketbaseClient';
+import { apiClient } from '@/lib/apiClient.js';
+import { userService } from '@/services/userService.js';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { User, Mail, Phone, Lock, CalendarDays, AlertCircle } from 'lucide-react';
@@ -34,58 +35,25 @@ const ProfilePage = () => {
     e.preventDefault();
     setEmailError('');
     setIsUpdating(true);
-    
+
     try {
-      const emailInput = profileData.email.trim().toLowerCase();
-      const isEmailChanged = emailInput !== currentUser.email;
-
-      if (isEmailChanged) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(emailInput)) {
-          setEmailError('Invalid email format');
-          setIsUpdating(false);
-          return;
-        }
-
-        // Check availability
-        const existingUsers = await pb.collection('users').getList(1, 1, {
-          filter: `email="${emailInput}"`,
-          $autoCancel: false
-        });
-        if (existingUsers.totalItems > 0) {
-          setEmailError('Email already in use by another account');
-          setIsUpdating(false);
-          return;
-        }
-      }
-
-      // Exclude email from payload if it hasn't changed to avoid validation_values_mismatch 400 Bad Request
+      // Email changes aren't supported by the account API — only name/phone are editable.
       const payload = {
         name: profileData.name.trim(),
         phone: profileData.phone.trim()
       };
 
-      if (isEmailChanged) {
-        payload.email = emailInput;
-      }
+      await userService.update(currentUser.id, payload);
 
-      await pb.collection('users').update(currentUser.id, payload, { $autoCancel: false });
-      
-      // Update local form state formatting
       setProfileData({
-        ...profileData, 
-        name: payload.name, 
-        email: emailInput, 
+        ...profileData,
+        name: payload.name,
         phone: payload.phone
       });
-      
+
       toast.success('Profile updated successfully');
     } catch (error) {
-      if (error.data?.data?.email?.message) {
-        setEmailError(error.data.data.email.message);
-      } else {
-        toast.error(error.message || 'Failed to update profile');
-      }
+      toast.error(error.message || 'Failed to update profile');
     } finally {
       setIsUpdating(false);
     }
@@ -97,14 +65,17 @@ const ProfilePage = () => {
       toast.error('New passwords do not match');
       return;
     }
-    
+
     setIsChangingPassword(true);
     try {
-      await pb.collection('users').update(currentUser.id, passwordData, { $autoCancel: false });
+      await apiClient.post('/api/auth/change-password', {
+        currentPassword: passwordData.oldPassword,
+        newPassword: passwordData.password,
+      });
       toast.success('Password changed successfully');
       setPasswordData({ oldPassword: '', password: '', passwordConfirm: '' });
     } catch (error) {
-      toast.error('Failed to change password. Ensure your current password is correct.');
+      toast.error(error.message || 'Failed to change password. Ensure your current password is correct.');
     } finally {
       setIsChangingPassword(false);
     }
@@ -152,7 +123,7 @@ const ProfilePage = () => {
                     )}
                     <div className="flex items-center gap-3 text-muted-foreground">
                       <CalendarDays className="w-4 h-4 shrink-0" />
-                      <span>Joined {currentUser?.created ? format(new Date(currentUser.created), 'MMMM yyyy') : 'Recently'}</span>
+                      <span>Joined {currentUser?.created_at ? format(new Date(currentUser.created_at), 'MMMM yyyy') : 'Recently'}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -187,17 +158,15 @@ const ProfilePage = () => {
                       <Label htmlFor="email" className={emailError ? 'text-destructive' : ''}>
                         Email Address <span className="text-destructive">*</span>
                       </Label>
-                      <Input 
-                        id="email" 
-                        type="text" 
-                        value={profileData.email} 
-                        onChange={(e) => {
-                          setProfileData({...profileData, email: e.target.value});
-                          if(emailError) setEmailError('');
-                        }}
-                        required
-                        className={`text-foreground ${emailError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                      <Input
+                        id="email"
+                        type="text"
+                        value={profileData.email}
+                        readOnly
+                        disabled
+                        className="text-foreground opacity-70 cursor-not-allowed"
                       />
+                      <p className="text-xs text-muted-foreground">Email address cannot be changed.</p>
                       {emailError && (
                         <div className="flex items-center gap-1.5 mt-1 text-sm text-destructive font-medium">
                           <AlertCircle className="w-4 h-4" />

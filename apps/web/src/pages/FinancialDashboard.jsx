@@ -5,8 +5,10 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp, TrendingDown, DollarSign, Receipt, PieChart as PieChartIcon } from 'lucide-react';
 import FinancialNavigation from '@/components/FinancialNavigation';
-import pb from '@/lib/pocketbaseClient';
 import { format, subMonths, isSameMonth } from 'date-fns';
+import { orderService } from '@/services/orderService.js';
+import { paymentService } from '@/services/paymentService.js';
+import { expenseService } from '@/services/expenseService.js';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { toast } from 'sonner';
 
@@ -21,9 +23,9 @@ const FinancialDashboard = () => {
   const loadFinancialData = async () => {
     try {
       const [orders, payments, expenses] = await Promise.all([
-        pb.collection('orders').getFullList({ expand: 'product_id', sort: '-created', $autoCancel: false }),
-        pb.collection('payments').getFullList({ filter: "payment_status = 'Confirmed'", sort: '-payment_date', $autoCancel: false }),
-        pb.collection('expenses').getFullList({ sort: '-transaction_date', $autoCancel: false })
+        orderService.listAll({ sort: 'created_at', order: 'desc' }),
+        paymentService.listAll({ status: 'Confirmed', sort: 'payment_date', order: 'desc' }),
+        expenseService.listAll({ sort: 'transaction_date', order: 'desc' }),
       ]);
 
       const now = new Date();
@@ -73,7 +75,7 @@ const FinancialDashboard = () => {
 
       setData({
         totals: { totalRevenue, totalExpenses, netProfit, profitMargin, cashBalance: netProfit },
-        currentMonth: { revenue: cmRevenue, expenses: cmExpenses, profit: cmProfit, ordersCount: orders.filter(o => isSameMonth(new Date(o.created), now)).length },
+        currentMonth: { revenue: cmRevenue, expenses: cmExpenses, profit: cmProfit, ordersCount: orders.filter(o => isSameMonth(new Date(o.created_at), now)).length },
         trends,
         expenseBreakdown,
         recent: {

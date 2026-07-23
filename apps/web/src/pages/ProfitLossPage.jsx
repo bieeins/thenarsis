@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download, Calculator } from 'lucide-react';
 import FinancialNavigation from '@/components/FinancialNavigation';
-import pb from '@/lib/pocketbaseClient';
 import { exportToPDF } from '@/lib/exportUtils';
+import { paymentService } from '@/services/paymentService.js';
+import { expenseService } from '@/services/expenseService.js';
 import { toast } from 'sonner';
 
 const ProfitLossPage = () => {
@@ -19,8 +20,8 @@ const ProfitLossPage = () => {
   const loadData = async () => {
     try {
       const [payments, expenses] = await Promise.all([
-        pb.collection('payments').getFullList({ filter: "payment_status = 'Confirmed'", $autoCancel: false }),
-        pb.collection('expenses').getFullList({ $autoCancel: false })
+        paymentService.listAll({ status: 'Confirmed' }),
+        expenseService.listAll(),
       ]);
 
       const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0);

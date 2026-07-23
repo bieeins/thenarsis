@@ -4,8 +4,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Loader2, AlertCircle } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient';
 import { toast } from 'sonner';
+import { userService } from '@/services/userService.js';
+import { orderService } from '@/services/orderService.js';
+import { designWorkService } from '@/services/designWorkService.js';
 
 const AssignDesignerModal = ({ open, onOpenChange, orderId, onSuccess }) => {
   const [designers, setDesigners] = useState([]);
@@ -24,14 +26,11 @@ const AssignDesignerModal = ({ open, onOpenChange, orderId, onSuccess }) => {
     setLoading(true);
     setError(false);
     try {
-      const records = await pb.collection('users').getFullList({
-        filter: "role = 'designer'",
-        sort: 'name',
-        $autoCancel: false
-      });
+      const records = await userService.listAll({ role: 'designer', sort: 'name', order: 'asc' });
       setDesigners(records || []);
 
-      const order = await pb.collection('orders').getOne(orderId, { $autoCancel: false });
+      const orderRes = await orderService.get(orderId);
+      const order = orderRes.data;
       if (order?.assigned_designer_id) {
         setSelectedDesigner(order.assigned_designer_id);
       } else {
@@ -53,25 +52,22 @@ const AssignDesignerModal = ({ open, onOpenChange, orderId, onSuccess }) => {
 
     setSaving(true);
     try {
-      await pb.collection('orders').update(orderId, {
+      await orderService.update(orderId, {
         assigned_designer_id: selectedDesigner
-      }, { $autoCancel: false });
-
-      const existingDesignWork = await pb.collection('design_work').getFullList({
-        filter: `order_id = "${orderId}"`,
-        $autoCancel: false
       });
 
+      const existingDesignWork = await designWorkService.listAll({ orderId });
+
       if (existingDesignWork && existingDesignWork.length > 0) {
-        await pb.collection('design_work').update(existingDesignWork[0].id, {
+        await designWorkService.update(existingDesignWork[0].id, {
           designer_id: selectedDesigner
-        }, { $autoCancel: false });
+        });
       } else {
-        await pb.collection('design_work').create({
+        await designWorkService.create({
           order_id: orderId,
           designer_id: selectedDesigner,
           status: 'pending'
-        }, { $autoCancel: false });
+        });
       }
 
       toast.success('Designer assigned successfully');

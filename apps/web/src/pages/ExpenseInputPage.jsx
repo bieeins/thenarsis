@@ -13,14 +13,19 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import pb from '@/lib/pocketbaseClient';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Wallet, PieChart, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/contexts/AuthContext.jsx';
+import { expenseService } from '@/services/expenseService.js';
+import { fileService } from '@/services/fileService.js';
+import { userService } from '@/services/userService.js';
 
 const ExpenseInputPage = () => {
+  const { currentUser } = useAuth();
   const [expenses, setExpenses] = useState([]);
+  const [userMap, setUserMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -50,12 +55,12 @@ const ExpenseInputPage = () => {
 
   const loadExpenses = async () => {
     try {
-      const records = await pb.collection('expenses').getFullList({
-        sort: '-transaction_date',
-        expand: 'uploaded_by_id',
-        $autoCancel: false
-      });
+      const [records, users] = await Promise.all([
+        expenseService.listAll({ sort: 'transaction_date', order: 'desc' }),
+        userService.listAll(),
+      ]);
       setExpenses(records);
+      setUserMap(Object.fromEntries(users.map((u) => [u.id, u])));
     } catch (error) {
       toast.error('Failed to load expenses');
     } finally {
@@ -74,19 +79,21 @@ const ExpenseInputPage = () => {
     setSubmitting(true);
 
     try {
-      const formPayload = new FormData();
-      formPayload.append('transaction_date', formData.transaction_date + ' 12:00:00.000Z');
-      formPayload.append('category', formData.category);
-      formPayload.append('amount', formData.amount);
-      formPayload.append('description', formData.description);
-      formPayload.append('uploaded_by_id', pb.authStore.model.id);
-      
+      let receiptFileId = null;
       if (formData.receipt_file) {
-        formPayload.append('receipt_file', formData.receipt_file);
+        const uploadRes = await fileService.upload(formData.receipt_file, 'expenses');
+        receiptFileId = uploadRes.data?.id || null;
       }
 
-      await pb.collection('expenses').create(formPayload, { $autoCancel: false });
-      
+      await expenseService.create({
+        transaction_date: formData.transaction_date + ' 12:00:00.000Z',
+        category: formData.category,
+        amount: formData.amount,
+        description: formData.description,
+        uploaded_by_id: currentUser?.id,
+        receipt_file: receiptFileId,
+      });
+
       toast.success('Expense recorded successfully');
       setFormData({
         transaction_date: new Date().toISOString().split('T')[0],
@@ -310,7 +317,7 @@ const ExpenseInputPage = () => {
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground">
-                              {format(new Date(expense.transaction_date), 'MMM dd, yyyy')} • Oleh {expense.expand?.uploaded_by_id?.name || 'Unknown'}
+                              {format(new Date(expense.transaction_date), 'MMM dd, yyyy')} • Oleh {userMap[expense.uploaded_by_id]?.name || 'Unknown'}
                             </p>
                             {expense.description && (
                               <p className="text-sm mt-2 max-w-[500px] truncate">{expense.description}</p>
@@ -318,10 +325,19 @@ const ExpenseInputPage = () => {
                           </div>
                           <div className="flex items-center">
                             {expense.receipt_file && (
-                              <Button variant="ghost" size="sm" asChild>
-                                <a href={pb.files.getURL(expense, expense.receipt_file)} target="_blank" rel="noopener noreferrer">
-                                  View Receipt
-                                </a>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={async () => {
+                                  try {
+                                    const url = await fileService.getObjectUrl(expense.receipt_file);
+                                    window.open(url, '_blank', 'noopener,noreferrer');
+                                  } catch (err) {
+                                    toast.error('Failed to load receipt');
+                                  }
+                                }}
+                              >
+                                View Receipt
                               </Button>
                             )}
                           </div>

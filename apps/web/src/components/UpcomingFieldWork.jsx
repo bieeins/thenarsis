@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Skeleton } from '@/components/ui/skeleton.jsx';
 import { useUpcomingEvents } from '@/hooks/useUpcomingEvents.js';
-import pb from '@/lib/pocketbaseClient.js';
+import { designWorkService } from '@/services/designWorkService.js';
 import { validateAndFormatDesignLink } from '@/lib/validateAndFormatDesignLink.js';
 
 const UpcomingFieldWork = () => {
@@ -25,11 +25,9 @@ const UpcomingFieldWork = () => {
       }
 
       try {
-        const orderIds = events.map(e => `"${e.order_id}"`).join(',');
-        const dWorks = await pb.collection('design_work').getFullList({
-          filter: `order_id ?= [${orderIds}]`,
-          $autoCancel: false
-        });
+        const orderIds = events.map(e => e.order_id);
+        const allDWorks = await designWorkService.listAll();
+        const dWorks = allDWorks.filter(dw => orderIds.includes(dw.order_id));
 
         const updated = events.map(ev => {
           const matchingDesign = dWorks.find(dw => dw.order_id === ev.order_id);

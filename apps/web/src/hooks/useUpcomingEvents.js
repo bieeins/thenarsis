@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import pb from '@/lib/pocketbaseClient.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { addDays, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
+import { crewAssignmentService } from '@/services/crewAssignmentService.js';
+
+const POLL_INTERVAL_MS = 30000;
 
 export const useUpcomingEvents = () => {
   const { currentUser } = useAuth();
@@ -12,17 +14,13 @@ export const useUpcomingEvents = () => {
 
   const loadData = useCallback(async () => {
     if (!currentUser) return;
-    
+
     setLoading(true);
     setError(null);
 
     try {
       // Fetch all assignments for the crew member with expanded order and product data
-      const records = await pb.collection('crew_assignments').getFullList({
-        filter: `crew_id="${currentUser.id}"`,
-        expand: 'order_id,order_id.product_id',
-        $autoCancel: false
-      });
+      const records = await crewAssignmentService.listAll({ crewId: currentUser.id });
 
       // Track if they have any events at all for empty state handling
       setHasAnyEvents(records.length > 0);
@@ -33,24 +31,24 @@ export const useUpcomingEvents = () => {
 
       // Map, filter, and sort the merged data
       const upcoming = records
-        .map(assignment => {
-          const order = assignment.expand?.order_id;
+        .map((assignment) => {
+          const order = assignment.order;
           return {
             assignment_id: assignment.id,
             order_id: order?.id,
             event_name: order?.event_name,
             customer_name: order?.customer_name,
             event_date: order?.event_date,
-            event_time: order?.event_date, // In PocketBase, datetime is usually combined
+            event_time: order?.event_date,
             event_location: order?.event_location,
-            package_name: order?.expand?.product_id?.package_name,
+            package_name: order?.product?.package_name,
             status: order?.status,
             total_amount: order?.total_amount,
             attendance_status: assignment.attendance_status,
-            assigned_date: assignment.assigned_date || assignment.created
+            assigned_date: assignment.assigned_date || assignment.created_at,
           };
         })
-        .filter(event => {
+        .filter((event) => {
           if (!event.event_date) return false;
           const eventDate = new Date(event.event_date);
           return isAfter(eventDate, today) && isBefore(eventDate, nextWeek);
@@ -68,31 +66,13 @@ export const useUpcomingEvents = () => {
   }, [currentUser]);
 
   useEffect(() => {
+    if (!currentUser) return;
+
     loadData();
-
-    // Subscribe to real-time changes
-    const subscribeToRealtime = async () => {
-      try {
-        await pb.collection('crew_assignments').subscribe('*', (e) => {
-          if (e.record.crew_id === currentUser?.id) {
-            loadData();
-          }
-        });
-        await pb.collection('orders').subscribe('*', () => {
-          loadData();
-        });
-      } catch (err) {
-        console.warn('Failed to subscribe to realtime upcoming events', err);
-      }
-    };
-
-    if (currentUser) {
-      subscribeToRealtime();
-    }
+    const intervalId = setInterval(loadData, POLL_INTERVAL_MS);
 
     return () => {
-      pb.collection('crew_assignments').unsubscribe('*').catch(() => {});
-      pb.collection('orders').unsubscribe('*').catch(() => {});
+      clearInterval(intervalId);
     };
   }, [loadData, currentUser]);
 

@@ -7,13 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Download, Search, Paperclip } from 'lucide-react';
 import FinancialNavigation from '@/components/FinancialNavigation';
-import pb from '@/lib/pocketbaseClient';
 import { format } from 'date-fns';
 import { exportToCSV, exportToPDF } from '@/lib/exportUtils';
 import { toast } from 'sonner';
+import { expenseService } from '@/services/expenseService.js';
+import { userService } from '@/services/userService.js';
+import { fileService } from '@/services/fileService.js';
 
 const ExpenseReportPage = () => {
   const [expenses, setExpenses] = useState([]);
+  const [userMap, setUserMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
@@ -24,8 +27,12 @@ const ExpenseReportPage = () => {
 
   const loadData = async () => {
     try {
-      const records = await pb.collection('expenses').getFullList({ expand: 'uploaded_by_id', sort: '-transaction_date', $autoCancel: false });
+      const [records, users] = await Promise.all([
+        expenseService.listAll({ sort: 'transaction_date', order: 'desc' }),
+        userService.listAll(),
+      ]);
       setExpenses(records);
+      setUserMap(Object.fromEntries(users.map((u) => [u.id, u])));
     } catch (error) {
       toast.error('Failed to load expenses');
     } finally {
@@ -37,7 +44,7 @@ const ExpenseReportPage = () => {
     if (category !== 'All' && exp.category !== category) return false;
     if (!search) return true;
     const s = search.toLowerCase();
-    return exp.description?.toLowerCase().includes(s) || exp.expand?.uploaded_by_id?.name?.toLowerCase().includes(s);
+    return exp.description?.toLowerCase().includes(s) || userMap[exp.uploaded_by_id]?.name?.toLowerCase().includes(s);
   });
 
   const handleExportCSV = () => {
@@ -46,7 +53,7 @@ const ExpenseReportPage = () => {
       'Category': exp.category,
       'Description': exp.description?.replace(/<[^>]*>?/gm, '') || '',
       'Amount': exp.amount,
-      'Uploaded By': exp.expand?.uploaded_by_id?.name || 'Unknown'
+      'Uploaded By': userMap[exp.uploaded_by_id]?.name || 'Unknown'
     }));
     exportToCSV('Expense_Report', ['Date', 'Category', 'Description', 'Amount', 'Uploaded By'], data);
   };
@@ -109,13 +116,24 @@ const ExpenseReportPage = () => {
                         <TableCell className="whitespace-nowrap">{format(new Date(exp.transaction_date), 'MMM dd, yyyy')}</TableCell>
                         <TableCell className="capitalize whitespace-nowrap">{exp.category.replace('_', ' ')}</TableCell>
                         <TableCell className="truncate max-w-[250px]" dangerouslySetInnerHTML={{ __html: exp.description || '-' }}></TableCell>
-                        <TableCell className="whitespace-nowrap">{exp.expand?.uploaded_by_id?.name || 'Unknown'}</TableCell>
+                        <TableCell className="whitespace-nowrap">{userMap[exp.uploaded_by_id]?.name || 'Unknown'}</TableCell>
                         <TableCell className="text-right font-numeric font-medium text-expense">Rp {exp.amount.toLocaleString()}</TableCell>
                         <TableCell className="text-right">
                           {exp.receipt_file ? (
-                            <a href={pb.files.getURL(exp, exp.receipt_file)} target="_blank" rel="noreferrer" className="inline-flex items-center text-primary hover:underline">
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  const url = await fileService.getObjectUrl(exp.receipt_file);
+                                  window.open(url, '_blank', 'noopener,noreferrer');
+                                } catch (err) {
+                                  toast.error('Failed to load receipt');
+                                }
+                              }}
+                              className="inline-flex items-center text-primary hover:underline"
+                            >
                               <Paperclip className="w-4 h-4" />
-                            </a>
+                            </button>
                           ) : '-'}
                         </TableCell>
                       </TableRow>

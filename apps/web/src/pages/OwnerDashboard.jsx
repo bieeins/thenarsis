@@ -4,11 +4,17 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, TrendingUp, Users, Wallet, Activity, LayoutDashboard, CalendarDays } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import FeesAndCompensationWidget from '@/components/FeesAndCompensationWidget.jsx';
+import { orderService } from '@/services/orderService.js';
+import { invoiceService } from '@/services/invoiceService.js';
+import { paymentService } from '@/services/paymentService.js';
+import { expenseService } from '@/services/expenseService.js';
+import { userService } from '@/services/userService.js';
+import { designIncomeService } from '@/services/designIncomeService.js';
+import { crewAssignmentService } from '@/services/crewAssignmentService.js';
 
 const OwnerDashboard = () => {
   const [stats, setStats] = useState({
@@ -32,13 +38,13 @@ const OwnerDashboard = () => {
   const loadDashboardData = async () => {
     try {
       const [orders, invoices, payments, expenses, users, designFees, crewAssignments] = await Promise.all([
-        pb.collection('orders').getFullList({ expand: 'product_id', sort: '-created', $autoCancel: false }),
-        pb.collection('invoices').getFullList({ $autoCancel: false }),
-        pb.collection('payments').getFullList({ filter: "payment_status = 'Confirmed'", $autoCancel: false }),
-        pb.collection('expenses').getFullList({ $autoCancel: false }),
-        pb.collection('users').getFullList({ $autoCancel: false }),
-        pb.collection('design_income').getFullList({ $autoCancel: false }),
-        pb.collection('crew_assignments').getFullList({ $autoCancel: false })
+        orderService.listAll({ sort: 'created_at', order: 'desc' }),
+        invoiceService.listAll(),
+        paymentService.listAll({ status: 'Confirmed' }),
+        expenseService.listAll(),
+        userService.listAll(),
+        designIncomeService.listAll(),
+        crewAssignmentService.listAll(),
       ]);
 
       const grossRevenue = invoices.reduce((sum, inv) => sum + inv.total_amount, 0);

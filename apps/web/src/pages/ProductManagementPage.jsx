@@ -12,9 +12,9 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient';
 import { toast } from 'sonner';
 import ProductForm from '@/components/ProductForm';
+import { productService } from '@/services/productService.js';
 
 const ProductManagementPage = () => {
   const [products, setProducts] = useState([]);
@@ -28,10 +28,7 @@ const ProductManagementPage = () => {
 
   const loadProducts = async () => {
     try {
-      const records = await pb.collection('products').getFullList({
-        sort: '-created',
-        $autoCancel: false
-      });
+      const records = await productService.listAll({ sort: 'created_at', order: 'desc' });
       setProducts(records);
     } catch (error) {
       toast.error('Failed to load products');
@@ -44,7 +41,7 @@ const ProductManagementPage = () => {
     if (!window.confirm('Are you sure you want to delete this product?')) return;
 
     try {
-      await pb.collection('products').delete(id, { $autoCancel: false });
+      await productService.remove(id);
       toast.success('Product deleted successfully');
       loadProducts();
     } catch (error) {

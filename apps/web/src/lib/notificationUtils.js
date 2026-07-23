@@ -1,5 +1,5 @@
-import pb from '@/lib/pocketbaseClient';
 import { format } from 'date-fns';
+import { notificationService } from '@/services/notificationService.js';
 
 /**
  * Creates a notification for a user when they are assigned to an order
@@ -12,14 +12,14 @@ export const createAssignmentNotification = async (userId, order) => {
       ? format(new Date(order.event_date), 'MMM dd, yyyy') 
       : 'Date TBA';
       
-    await pb.collection('notifications').create({
+    await notificationService.create({
       user_id: userId,
       type: 'assignment',
       title: 'Ada Project Masuk',
       message: `${formattedDate}, ${order.event_location || 'Location TBA'}`,
       related_order_id: order.id,
       is_read: false
-    }, { $autoCancel: false });
+    });
   } catch (error) {
     console.error('Failed to create assignment notification:', error);
   }

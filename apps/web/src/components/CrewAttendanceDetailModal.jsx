@@ -6,8 +6,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, AlertTriangle } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient';
 import { toast } from 'sonner';
+import { crewAssignmentService } from '@/services/crewAssignmentService.js';
 import { format } from 'date-fns';
 
 const CrewAttendanceDetailModal = ({ isOpen, onClose, assignmentRecord, onSave }) => {
@@ -59,10 +59,10 @@ const CrewAttendanceDetailModal = ({ isOpen, onClose, assignmentRecord, onSave }
         updateData.attendance_amount = null;
       }
 
-      const updated = await pb.collection('crew_assignments').update(assignmentRecord.id, updateData, { $autoCancel: false });
-      
+      const res = await crewAssignmentService.update(assignmentRecord.id, updateData);
+
       toast.success('Attendance updated successfully');
-      if (onSave) onSave(updated);
+      if (onSave) onSave(res.data);
       onClose();
     } catch (error) {
       console.error('Error updating attendance:', error);
@@ -75,9 +75,9 @@ const CrewAttendanceDetailModal = ({ isOpen, onClose, assignmentRecord, onSave }
 
   if (!assignmentRecord) return null;
 
-  const crewName = assignmentRecord.expand?.crew_id?.name || 'Unknown Crew';
-  const eventName = assignmentRecord.expand?.order_id?.event_name || 'Unknown Event';
-  const eventDate = assignmentRecord.expand?.order_id?.event_date;
+  const crewName = assignmentRecord.crew?.name || 'Unknown Crew';
+  const eventName = assignmentRecord.order?.event_name || 'Unknown Event';
+  const eventDate = assignmentRecord.order?.event_date;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !isSubmitting && onClose()}>

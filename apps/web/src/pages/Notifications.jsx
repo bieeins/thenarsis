@@ -4,8 +4,8 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bell, CheckCircle2, Circle, Trash2, Clock, Calendar, FileImage, DollarSign } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient';
 import { useAuth } from '@/contexts/AuthContext';
+import { notificationService } from '@/services/notificationService.js';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,12 +23,11 @@ const Notifications = () => {
 
   const loadNotifications = async () => {
     try {
-      const records = await pb.collection('notifications').getFullList({
-        filter: `user_id = "${currentUser.id}"`,
-        sort: '-created_date',
-        $autoCancel: false
-      });
-      setNotifications(records);
+      const records = await notificationService.listMine();
+      const sorted = [...records].sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
+      setNotifications(sorted);
     } catch (error) {
       toast.error('Failed to load notifications');
     } finally {
@@ -36,12 +35,12 @@ const Notifications = () => {
     }
   };
 
-  const markAsRead = async (id, currentStatus) => {
+  // The API only supports marking a notification as read (no toggling back
+  // to unread), so this simply marks it read when invoked.
+  const markAsRead = async (id) => {
     try {
-      await pb.collection('notifications').update(id, {
-        is_read: !currentStatus
-      }, { $autoCancel: false });
-      setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: !currentStatus } : n));
+      await notificationService.markRead(id);
+      setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: true } : n));
     } catch (error) {
       toast.error('Failed to update notification');
     }
@@ -50,9 +49,7 @@ const Notifications = () => {
   const markAllAsRead = async () => {
     try {
       const unread = notifications.filter(n => !n.is_read);
-      await Promise.all(unread.map(n => 
-        pb.collection('notifications').update(n.id, { is_read: true }, { $autoCancel: false })
-      ));
+      await Promise.all(unread.map(n => notificationService.markRead(n.id)));
       setNotifications(notifications.map(n => ({ ...n, is_read: true })));
       toast.success('All marked as read');
     } catch (error) {
@@ -62,7 +59,7 @@ const Notifications = () => {
 
   const deleteNotification = async (id) => {
     try {
-      await pb.collection('notifications').delete(id, { $autoCancel: false });
+      await notificationService.remove(id);
       setNotifications(notifications.filter(n => n.id !== id));
       toast.success('Notification deleted');
     } catch (error) {
@@ -152,15 +149,16 @@ const Notifications = () => {
                               {notif.message}
                             </p>
                             <span className="text-xs text-muted-foreground mt-2 block">
-                              {formatDistanceToNow(new Date(notif.created_date || notif.created), { addSuffix: true })}
+                              {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
                             </span>
                           </Link>
                         </div>
                         <div className="flex flex-col items-end gap-2 flex-shrink-0">
                           <button
-                            onClick={() => markAsRead(notif.id, notif.is_read)}
-                            className="text-muted-foreground hover:text-primary transition-colors p-1"
-                            title={notif.is_read ? "Mark as unread" : "Mark as read"}
+                            onClick={() => !notif.is_read && markAsRead(notif.id)}
+                            disabled={notif.is_read}
+                            className="text-muted-foreground hover:text-primary transition-colors p-1 disabled:cursor-default"
+                            title={notif.is_read ? "Read" : "Mark as read"}
                           >
                             {notif.is_read ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5 text-primary" />}
                           </button>

@@ -3,6 +3,10 @@ node_modules
 # Build output
 dist
 
+# Local file uploads (apps/api)
+apps/api/uploads/*
+!apps/api/uploads/.gitkeep
+
 # PocketBase runtime data (local database, uploaded files, backups)
 apps/pocketbase/pb_data
 apps/pocketbase/pb_data.orig-encrypted.bak
@@ -15,6 +19,9 @@ apps/pocketbase/*.zip
 # Secrets
 .env
 .env.*
+!.env.example
+!*/.env.example
+!*/*/.env.example
 apps/pocketbase/.env
 
 # OS
