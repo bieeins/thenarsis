@@ -1,0 +1,21 @@
+node_modules
+
+# Build output
+dist
+
+# PocketBase runtime data (local database, uploaded files, backups)
+apps/pocketbase/pb_data
+apps/pocketbase/pb_data.orig-encrypted.bak
+
+# PocketBase binary (platform-specific, fetched by postinstall script)
+apps/pocketbase/pocketbase
+apps/pocketbase/pocketbase.linux-x86_64.bak
+apps/pocketbase/*.zip
+
+# Secrets
+.env
+.env.*
+apps/pocketbase/.env
+
+# OS
+.DS_Store
