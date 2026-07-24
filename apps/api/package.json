@@ -7,6 +7,7 @@
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "build": "knex migrate:latest && node --check src/server.js",
+    "build:hostinger:api": "npm run db:migrate && npm run build:api",
     "db:migrate": "knex migrate:latest",
     "db:rollback": "knex migrate:rollback",
     "db:seed": "knex seed:run",
