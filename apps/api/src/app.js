@@ -13,6 +13,9 @@ import routes from './routes/index.js';
 
 export const app = express();
 
+// Hostinger menjalankan Node.js di belakang reverse proxy.
+app.set('trust proxy', 1);
+
 app.use(helmet());
 app.use(cors({
   origin: env.frontendUrl,
