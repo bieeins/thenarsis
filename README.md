@@ -124,7 +124,7 @@ Tests run against a separate `thenarsis_test` database (via `NODE_ENV=test`, see
 
 See `apps/api/.env.example` and `apps/web/.env.example` for the full list. Key ones:
 
-- `apps/api`: `DB_*` (MySQL connection), `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` (generate long random values — never commit real secrets), `FRONTEND_URL` (CORS allow-list, exact match, no wildcard), `COOKIE_*`, `SMTP_*`, `STORAGE_*`.
+- `apps/api`: `DB_*` (MySQL connection), `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` (generate long random values — never commit real secrets), `FRONTEND_URL` (CORS allow-list, exact match, no wildcard), `COOKIE_*`, `SMTP_*`, `STORAGE_*`, and optional `API_RATE_LIMIT_*` / `LOGIN_RATE_LIMIT_MAX` overrides.
 - `apps/web`: `VITE_API_URL` — the API's base URL. Never put secrets in `VITE_*` variables; they are bundled into the public frontend build.
 
 The API validates required environment variables at startup in production (`NODE_ENV=production`) and refuses to start if any are missing.

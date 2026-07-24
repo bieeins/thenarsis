@@ -84,5 +84,11 @@ export const env = {
 
   logLevel: process.env.LOG_LEVEL || 'info',
 
+  rateLimit: {
+    windowMs: Number(process.env.API_RATE_LIMIT_WINDOW_MS || 5 * 60 * 1000),
+    limit: Number(process.env.API_RATE_LIMIT_MAX || 1000),
+    loginLimit: Number(process.env.LOGIN_RATE_LIMIT_MAX || 20),
+  },
+
   pbExportDir: process.env.PB_EXPORT_DIR || '',
 };
