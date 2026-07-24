@@ -3,10 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "scripts": {
+   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
-    "build": "knex migrate:latest && node --check src/server.js",
+    "build": "knex migrate:latest && node -e \"import('express').then(() => console.log('EXPRESS_OK'))\" && node --check src/server.js",
     "db:migrate": "knex migrate:latest",
     "db:rollback": "knex migrate:rollback",
     "db:seed": "knex seed:run",
