@@ -168,12 +168,12 @@ const Header = () => {
         <div className="ml-auto flex items-center gap-3">
           {!currentUser ? (
             <div className="flex items-center gap-2">
-              <Button variant="ghost" asChild className="hidden sm:inline-flex">
+              {/* <Button variant="ghost" asChild className="hidden sm:inline-flex">
                 <Link to="/login">Login</Link>
               </Button>
               <Button asChild>
                 <Link to="/signup">Get Started</Link>
-              </Button>
+              </Button> */}
             </div>
           ) : (
             <>

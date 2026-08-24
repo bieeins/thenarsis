@@ -40,7 +40,7 @@ export const exportToPDF = (elementId, filename) => {
 
 const formatCurrency = (amount) => {
   if (amount === null || amount === undefined) return 'Rp 0';
-  return `Rp ${Number(amount).toLocaleString('id-ID')}`;
+  return `Rp ${Math.round(Number(amount) || 0).toLocaleString('id-ID')}`;
 };
 
 const formatDate = (dateString) => {
@@ -78,11 +78,11 @@ export const exportDesignFeesToCSV = (designFees, filters = {}) => {
 
     return [
       `"${(fee.designer_name || '').replace(/"/g, '""')}"`,
-      `"${(fee.expand?.order_id?.event_name || '').replace(/"/g, '""')}"`,
+      `"${(fee.order?.event_name || '').replace(/"/g, '""')}"`,
       `"${formatCurrency(amount)}"`,
-      `"${formatDate(fee.created)}"`,
+      `"${formatDate(fee.created_at)}"`,
       `"${(fee.status || '').toUpperCase()}"`,
-      `"${(fee.notes || '').replace(/"/g, '""')}"`
+      `""`
     ].join(',');
   });
 
@@ -114,14 +114,14 @@ export const exportCrewAttendanceToCSV = (crewAttendance, filters = {}) => {
     statusCounts[status] = (statusCounts[status] || 0) + 1;
 
     return [
-      `"${(crew.expand?.crew_id?.name || '').replace(/"/g, '""')}"`,
-      `"${(crew.expand?.order_id?.event_name || '').replace(/"/g, '""')}"`,
-      `"${formatDate(crew.expand?.order_id?.event_date)}"`,
+      `"${(crew.crew?.name || '').replace(/"/g, '""')}"`,
+      `"${(crew.order?.event_name || '').replace(/"/g, '""')}"`,
+      `"${formatDate(crew.order?.event_date)}"`,
       `"${status.toUpperCase()}"`,
       `"${(crew.attendance_reason || '').replace(/"/g, '""')}"`,
       `"${formatCurrency(amount)}"`,
-      `"${formatDate(crew.created)}"`,
-      `"${(crew.notes || '').replace(/"/g, '""')}"`
+      `"${formatDate(crew.created_at)}"`,
+      `"${(crew.crew_notes || '').replace(/"/g, '""')}"`
     ].join(',');
   });
 
@@ -167,11 +167,11 @@ export const exportCombinedReportToCSV = (designFees, crewAttendance, orders, fi
   const dfCols = ['Designer Name', 'Event Name', 'Fee Amount (Rp)', 'Submission Date', 'Status', 'Notes'];
   const dfRows = designFees.map(fee => [
     `"${(fee.designer_name || '').replace(/"/g, '""')}"`,
-    `"${(fee.expand?.order_id?.event_name || '').replace(/"/g, '""')}"`,
+    `"${(fee.order?.event_name || '').replace(/"/g, '""')}"`,
     `"${formatCurrency(fee.fee_amount || 0)}"`,
-    `"${formatDate(fee.created)}"`,
+    `"${formatDate(fee.created_at)}"`,
     `"${(fee.status || '').toUpperCase()}"`,
-    `"${(fee.notes || '').replace(/"/g, '""')}"`
+    `""`
   ].join(','));
 
   // Crew Attendance Section
@@ -179,14 +179,14 @@ export const exportCombinedReportToCSV = (designFees, crewAttendance, orders, fi
   const caTitle = ['CREW ATTENDANCE', '', '', '', '', '', '', ''];
   const caCols = ['Crew Name', 'Event Name', 'Event Date', 'Attendance Status', 'Attendance Reason', 'Amount (Rp)', 'Submission Date', 'Notes'];
   const caRows = crewAttendance.map(crew => [
-    `"${(crew.expand?.crew_id?.name || '').replace(/"/g, '""')}"`,
-    `"${(crew.expand?.order_id?.event_name || '').replace(/"/g, '""')}"`,
-    `"${formatDate(crew.expand?.order_id?.event_date)}"`,
+    `"${(crew.crew?.name || '').replace(/"/g, '""')}"`,
+    `"${(crew.order?.event_name || '').replace(/"/g, '""')}"`,
+    `"${formatDate(crew.order?.event_date)}"`,
     `"${(crew.attendance_status || 'belum_jawab').toUpperCase()}"`,
     `"${(crew.attendance_reason || '').replace(/"/g, '""')}"`,
     `"${formatCurrency(crew.attendance_amount || 0)}"`,
-    `"${formatDate(crew.created)}"`,
-    `"${(crew.notes || '').replace(/"/g, '""')}"`
+    `"${formatDate(crew.created_at)}"`,
+    `"${(crew.crew_notes || '').replace(/"/g, '""')}"`
   ].join(','));
 
   const csvContent = [

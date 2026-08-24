@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -30,7 +31,8 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
     event_date: '',
     event_location: '',
     product_id: '',
-    adjusted_price: ''
+    adjusted_price: '',
+    description: ''
   });
   const [selectedProduct, setSelectedProduct] = useState(null);
 
@@ -47,7 +49,8 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
         event_date: order.event_date || '',
         event_location: order.event_location || '',
         product_id: order.product_id || '',
-        adjusted_price: ''
+        adjusted_price: '',
+        description: order.description || ''
       });
     } else {
       setFormData({
@@ -57,7 +60,8 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
         event_date: '',
         event_location: '',
         product_id: '',
-        adjusted_price: ''
+        adjusted_price: '',
+        description: ''
       });
       setSelectedProduct(null);
     }
@@ -103,7 +107,8 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
           event_name: formData.event_name,
           event_date: formData.event_date,
           event_location: formData.event_location,
-          product_id: formData.product_id
+          product_id: formData.product_id,
+          description: formData.description
         });
         toast.success('Order updated successfully');
       } else {
@@ -118,6 +123,7 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
           product_id: formData.product_id,
           status: 'Pending',
           invoice_number: invoiceNumber,
+          description: formData.description,
           items: [{
             product_id: formData.product_id,
             base_price: selectedProduct?.base_price || 0,
@@ -215,6 +221,18 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
           </div>
 
           <div>
+            <Label htmlFor="description">Event Notes (visible to assigned crew)</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="text-gray-900"
+              placeholder="Special instructions, dress code, parking info, etc."
+              rows={3}
+            />
+          </div>
+
+          <div>
             <Label htmlFor="product_id">Package *</Label>
             <Select
               value={formData.product_id}
@@ -227,7 +245,7 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
               <SelectContent>
                 {products.map((product) => (
                   <SelectItem key={product.id} value={product.id}>
-                    {product.package_name} - IDR {product.base_price.toLocaleString()}
+                    {product.package_name} - Rp {Math.round(product.base_price).toLocaleString('id-ID')}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -236,7 +254,7 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
 
           {selectedProduct && (
             <div className="bg-muted p-3 rounded-lg">
-              <p className="text-sm font-medium">Base Price: IDR {selectedProduct.base_price.toLocaleString()}</p>
+              <p className="text-sm font-medium">Base Price: Rp {Math.round(selectedProduct.base_price).toLocaleString('id-ID')}</p>
             </div>
           )}
 

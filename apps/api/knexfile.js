@@ -13,6 +13,16 @@ const base = {
       if (field.type === 'TINY' && field.length === 1) {
         return field.string() === '1';
       }
+      // mysql2 returns DECIMAL columns as strings by default (to avoid float
+      // rounding), but every money field in this schema is DECIMAL and the
+      // frontend does arithmetic (sum, subtract, toLocaleString) on these
+      // values directly — leaving them as strings turns `+` into string
+      // concatenation instead of addition. Cast to Number here, once, so
+      // every consumer gets real numbers.
+      if (field.type === 'NEWDECIMAL' || field.type === 'DECIMAL') {
+        const value = field.string();
+        return value === null ? null : Number(value);
+      }
       return next();
     },
   },

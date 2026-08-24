@@ -457,7 +457,7 @@ const OrderDetailPage = () => {
                       <div className="flex justify-between items-center mb-3">
                         <span className="text-sm text-muted-foreground">Submitted Amount</span>
                         <span className="font-semibold text-lg font-numeric text-foreground">
-                          Rp {new Intl.NumberFormat('id-ID').format(designIncome.fee_amount || 0)}
+                          Rp {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(designIncome.fee_amount || 0)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
@@ -508,7 +508,7 @@ const OrderDetailPage = () => {
                         const assignerEmail = assigner?.email || '';
                         // Avatar object URLs require an authenticated fetch; fall back to initials here.
                         const assignerAvatar = null;
-                        const assignedDate = assignment.assigned_date || assignment.created;
+                        const assignedDate = assignment.assigned_date || assignment.created_at;
 
                         return (
                           <div key={assignment.id} className="flex flex-col p-3 border rounded-xl bg-card hover:border-blue-200 transition-colors">

@@ -94,10 +94,10 @@ Seeded accounts (dev only — change/remove for anything resembling production):
 ### Run everything
 
 ```bash
-npm run dev          # frontend on :5173 (or :3000, see apps/web/vite.config.js), API on :3000... wait see below
+npm run dev          # frontend on :5173, API on :3000
 ```
 
-The API always listens on `PORT` from `apps/api/.env` (default 3000) and the Vite dev server serves the frontend from its own port. Set `apps/web/.env`'s `VITE_API_URL` to point at the API's URL/port.
+The API listens on `PORT` from `apps/api/.env` (default `3000`) and the Vite dev server listens on `5173` (`apps/web/vite.config.js` / `apps/web/package.json`). These must stay on different ports — if they collide, Vite silently falls back to the next free port (e.g. `3001`), which then gets rejected by the API's CORS check (only `FRONTEND_URL` from `apps/api/.env`, default `http://localhost:5173`, is allowed) and login fails with a "Failed to fetch" error in the browser. Set `apps/web/.env`'s `VITE_API_URL` to point at the API's URL/port if you change the API's port.
 
 Run them individually with `npm run dev:web` / `npm run dev:api`.
 

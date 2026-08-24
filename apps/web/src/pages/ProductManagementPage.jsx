@@ -134,7 +134,7 @@ const ProductManagementPage = () => {
                             {product.category}
                           </Badge>
                         </TableCell>
-                        <TableCell>IDR {product.base_price.toLocaleString()}</TableCell>
+                        <TableCell>IDR {Math.round(product.base_price).toLocaleString('id-ID')}</TableCell>
                         <TableCell className="max-w-xs truncate">
                           {product.description || '-'}
                         </TableCell>

@@ -237,7 +237,7 @@ const DesignWorkDetail = () => {
             <div className="lg:col-span-2 space-y-8">
               <OrderDataDisplay 
                 order={order} 
-                assignmentDate={work.assigned_date || work.created} 
+                assignmentDate={work.assigned_date || work.created_at}
                 assignedBy={assignedBy} 
               />
               

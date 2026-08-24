@@ -50,18 +50,18 @@ const DesignReviewerDashboard = () => {
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(w => {
-        const eventName = (w.expand?.order_id?.event_name || '').toLowerCase();
-        const designerName = (w.expand?.designer_id?.name || '').toLowerCase();
+        const eventName = (w.order?.event_name || '').toLowerCase();
+        const designerName = (w.designer?.name || '').toLowerCase();
         const crewNames = (w.assigned_crews || []).map(c => c.name.toLowerCase()).join(' ');
         return eventName.includes(q) || designerName.includes(q) || crewNames.includes(q);
       });
     }
 
     result.sort((a, b) => {
-      const dateA = a.expand?.order_id?.event_date ? new Date(a.expand.order_id.event_date).getTime() : 0;
-      const dateB = b.expand?.order_id?.event_date ? new Date(b.expand.order_id.event_date).getTime() : 0;
-      const nameA = a.expand?.designer_id?.name || '';
-      const nameB = b.expand?.designer_id?.name || '';
+      const dateA = a.order?.event_date ? new Date(a.order.event_date).getTime() : 0;
+      const dateB = b.order?.event_date ? new Date(b.order.event_date).getTime() : 0;
+      const nameA = a.designer?.name || '';
+      const nameB = b.designer?.name || '';
 
       switch (sortBy) {
         case 'date_asc': return dateA - dateB;
@@ -187,8 +187,8 @@ const DesignReviewerDashboard = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredAndSortedWorks.map(work => {
-                const order = work.expand?.order_id || {};
-                const designer = work.expand?.designer_id || {};
+                const order = work.order || {};
+                const designer = work.designer || {};
                 const crewList = work.assigned_crews || [];
                 const linkInfo = validateAndFormatDesignLink(work.design_file_link);
                 const eventDate = order.event_date ? parseISO(order.event_date) : null;

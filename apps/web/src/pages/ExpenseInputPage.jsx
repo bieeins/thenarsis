@@ -19,6 +19,7 @@ import { Wallet, PieChart, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { expenseService } from '@/services/expenseService.js';
+import { expenseCategoryService } from '@/services/expenseCategoryService.js';
 import { fileService } from '@/services/fileService.js';
 import { userService } from '@/services/userService.js';
 
@@ -29,7 +30,8 @@ const ExpenseInputPage = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
-  
+  const [categories, setCategories] = useState([]);
+
   const [formData, setFormData] = useState({
     transaction_date: new Date().toISOString().split('T')[0],
     category: '',
@@ -38,29 +40,20 @@ const ExpenseInputPage = () => {
     receipt_file: null
   });
 
-  const CATEGORIES = [
-    { value: 'supplies', label: 'Supplies' },
-    { value: 'hosting', label: 'Hosting' },
-    { value: 'domain', label: 'Domain' },
-    { value: 'internet', label: 'Internet' },
-    { value: 'ads', label: 'Ads' },
-    { value: 'equipment_maintenance', label: 'Equipment Maintenance' },
-    { value: 'food', label: 'Food' },
-    { value: 'other', label: 'Other' }
-  ];
-
   useEffect(() => {
     loadExpenses();
   }, []);
 
   const loadExpenses = async () => {
     try {
-      const [records, users] = await Promise.all([
+      const [records, users, categoryList] = await Promise.all([
         expenseService.listAll({ sort: 'transaction_date', order: 'desc' }),
         userService.listAll(),
+        expenseCategoryService.list(),
       ]);
       setExpenses(records);
       setUserMap(Object.fromEntries(users.map((u) => [u.id, u])));
+      setCategories(categoryList);
     } catch (error) {
       toast.error('Failed to load expenses');
     } finally {
@@ -187,9 +180,9 @@ const ExpenseInputPage = () => {
                           <SelectValue placeholder="Select category" />
                         </SelectTrigger>
                         <SelectContent>
-                          {CATEGORIES.map(cat => (
-                            <SelectItem key={cat.value} value={cat.value}>
-                              {cat.label}
+                          {categories.map(cat => (
+                            <SelectItem key={cat.id} value={cat.name}>
+                              {cat.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -258,7 +251,7 @@ const ExpenseInputPage = () => {
                       </div>
                       <div>
                         <p className="text-sm font-medium opacity-90">Total Filtered</p>
-                        <p className="text-3xl font-bold">IDR {totalFiltered.toLocaleString()}</p>
+                        <p className="text-3xl font-bold">IDR {Math.round(totalFiltered).toLocaleString('id-ID')}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -275,9 +268,9 @@ const ExpenseInputPage = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All Categories</SelectItem>
-                          {CATEGORIES.map(cat => (
-                            <SelectItem key={cat.value} value={cat.value}>
-                              {cat.label}
+                          {categories.map(cat => (
+                            <SelectItem key={cat.id} value={cat.name}>
+                              {cat.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -287,7 +280,7 @@ const ExpenseInputPage = () => {
                       {Object.entries(expensesByCategory).map(([cat, amount]) => (
                         <div key={cat} className="flex justify-between items-center">
                           <span className="capitalize">{cat.replace('_', ' ')}</span>
-                          <span className="font-semibold">IDR {amount.toLocaleString()}</span>
+                          <span className="font-semibold">IDR {Math.round(amount).toLocaleString('id-ID')}</span>
                         </div>
                       ))}
                     </div>
@@ -311,7 +304,7 @@ const ExpenseInputPage = () => {
                         <div key={expense.id} className="flex flex-col sm:flex-row justify-between p-4 rounded-xl border bg-card hover:shadow-md transition-shadow">
                           <div className="mb-2 sm:mb-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="font-semibold text-lg">IDR {expense.amount.toLocaleString()}</span>
+                              <span className="font-semibold text-lg">IDR {Math.round(expense.amount).toLocaleString('id-ID')}</span>
                               <Badge variant="outline" className="capitalize text-xs">
                                 {expense.category.replace('_', ' ')}
                               </Badge>

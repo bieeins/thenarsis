@@ -184,7 +184,7 @@ const CrewEventDataTable = ({ events = [], loading, error, onToggleAttendance, o
     }
   };
 
-  const formatCurrency = (amount) => amount ? `Rp ${Number(amount).toLocaleString('id-ID')}` : 'Rp 0';
+  const formatCurrency = (amount) => amount ? `Rp ${Math.round(Number(amount)).toLocaleString('id-ID')}` : 'Rp 0';
 
   if (loading) {
     return (

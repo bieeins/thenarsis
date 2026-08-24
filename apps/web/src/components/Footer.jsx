@@ -6,7 +6,7 @@ const Footer = () => {
   return (
     <footer className="bg-secondary text-secondary-foreground mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
@@ -58,9 +58,9 @@ const Footer = () => {
               </li>
             </ul>
           </div>
-        </div>
+        </div> */}
 
-        <div className="border-t border-border mt-8 pt-8 text-center">
+        <div className="text-center">
           <p className="text-sm text-muted-foreground">
             © 2026 Thenarsis Management System V1.0. All rights reserved.
           </p>

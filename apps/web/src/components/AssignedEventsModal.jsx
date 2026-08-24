@@ -67,7 +67,7 @@ const AssignedEventsModal = ({ isOpen, onOpenChange, events, loading, error, onR
   const formatCurrency = (amt) => {
     try {
       if (amt === undefined || amt === null || isNaN(Number(amt))) return 'Rp 0';
-      return `Rp ${Number(amt).toLocaleString('id-ID')}`;
+      return `Rp ${Math.round(Number(amt)).toLocaleString('id-ID')}`;
     } catch {
       return 'Rp 0';
     }

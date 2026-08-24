@@ -206,15 +206,15 @@ const EventDetail = () => {
                     </div>
                     <div className="flex justify-between items-center text-sm border-b border-white/10 pb-2">
                       <span>Agreed Fee</span>
-                      <span className="font-semibold font-numeric">Rp {(assignment.attendance_amount || assignment.fee || 0).toLocaleString()}</span>
+                      <span className="font-semibold font-numeric">Rp {Math.round(assignment.attendance_amount || assignment.fee || 0).toLocaleString('id-ID')}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm border-b border-white/10 pb-2">
                       <span className="text-green-400">Paid Amount</span>
-                      <span className="font-semibold text-green-400 font-numeric">Rp {(assignment.paid_amount || 0).toLocaleString()}</span>
+                      <span className="font-semibold text-green-400 font-numeric">Rp {Math.round(assignment.paid_amount || 0).toLocaleString('id-ID')}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-primary">Pending Amount</span>
-                      <span className="font-bold text-primary font-numeric">Rp {(assignment.pending_amount || 0).toLocaleString()}</span>
+                      <span className="font-bold text-primary font-numeric">Rp {Math.round(assignment.pending_amount || 0).toLocaleString('id-ID')}</span>
                     </div>
                   </div>
                   

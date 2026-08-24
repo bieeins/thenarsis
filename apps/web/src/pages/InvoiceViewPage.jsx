@@ -206,7 +206,7 @@ const InvoiceViewPage = () => {
                         <p className="text-sm text-muted-foreground line-clamp-2 max-w-md">{displayOrder.product?.description?.replace(/<[^>]*>?/gm, '') || ''}</p>
                       </td>
                       <td className="py-4 text-right font-numeric font-semibold text-lg">
-                        IDR {(invoice.total_amount || 0).toLocaleString()}
+                        IDR {Math.round(invoice.total_amount || 0).toLocaleString('id-ID')}
                       </td>
                     </tr>
                   </tbody>
@@ -217,15 +217,15 @@ const InvoiceViewPage = () => {
                 <div className="w-full sm:w-1/2 md:w-1/3 space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span className="font-numeric font-medium">IDR {(invoice.total_amount || 0).toLocaleString()}</span>
+                    <span className="font-numeric font-medium">IDR {Math.round(invoice.total_amount || 0).toLocaleString('id-ID')}</span>
                   </div>
                   <div className="flex justify-between text-sm text-green-600 pb-3 border-b border-border">
                     <span>Payments Received</span>
-                    <span className="font-numeric font-medium">- IDR {totalPaid.toLocaleString()}</span>
+                    <span className="font-numeric font-medium">- IDR {Math.round(totalPaid).toLocaleString('id-ID')}</span>
                   </div>
                   <div className="flex justify-between text-lg pt-1">
                     <span className="font-bold">Balance Due</span>
-                    <span className="font-numeric font-bold text-primary">IDR {remainingBalance.toLocaleString()}</span>
+                    <span className="font-numeric font-bold text-primary">IDR {Math.round(remainingBalance).toLocaleString('id-ID')}</span>
                   </div>
                 </div>
               </div>
@@ -237,7 +237,7 @@ const InvoiceViewPage = () => {
                     {payments.map((payment) => (
                       <div key={payment.id} className="flex justify-between items-center p-4 bg-muted/30 border rounded-lg">
                         <div>
-                          <p className="font-semibold font-numeric">IDR {(payment.amount || 0).toLocaleString()}</p>
+                          <p className="font-semibold font-numeric">IDR {Math.round(payment.amount || 0).toLocaleString('id-ID')}</p>
                           <p className="text-sm text-muted-foreground">
                             {payment.payment_date ? format(new Date(payment.payment_date), 'MMM dd, yyyy') : 'Unknown Date'} • {payment.payment_method || 'Unknown Method'}
                           </p>

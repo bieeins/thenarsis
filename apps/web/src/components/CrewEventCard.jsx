@@ -113,7 +113,7 @@ const CrewEventCard = ({ event }) => {
   const formatCurrency = (amt) => {
     try {
       if (amt === undefined || amt === null || isNaN(Number(amt))) return 'Rp 0';
-      return `Rp ${Number(amt).toLocaleString('id-ID')}`;
+      return `Rp ${Math.round(Number(amt)).toLocaleString('id-ID')}`;
     } catch (err) {
       return 'Rp 0';
     }

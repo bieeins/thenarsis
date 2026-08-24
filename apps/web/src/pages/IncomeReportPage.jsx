@@ -120,9 +120,9 @@ const IncomeReportPage = () => {
                           <TableCell className="whitespace-nowrap">{order?.customer_name}</TableCell>
                           <TableCell className="whitespace-nowrap">{order?.event_name}</TableCell>
                           <TableCell>{order?.product?.package_name}</TableCell>
-                          <TableCell className="text-right font-numeric font-medium">Rp {inv.total_amount.toLocaleString()}</TableCell>
-                          <TableCell className="text-right font-numeric text-revenue">Rp {paid.toLocaleString()}</TableCell>
-                          <TableCell className="text-right font-numeric text-pending">{pending > 0 ? `Rp ${pending.toLocaleString()}` : '0'}</TableCell>
+                          <TableCell className="text-right font-numeric font-medium">Rp {Math.round(inv.total_amount).toLocaleString('id-ID')}</TableCell>
+                          <TableCell className="text-right font-numeric text-revenue">Rp {Math.round(paid).toLocaleString('id-ID')}</TableCell>
+                          <TableCell className="text-right font-numeric text-pending">{pending > 0 ? `Rp ${Math.round(pending).toLocaleString('id-ID')}` : '0'}</TableCell>
                         </TableRow>
                       );
                     })}

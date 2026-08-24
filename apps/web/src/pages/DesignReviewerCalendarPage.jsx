@@ -21,10 +21,10 @@ const DesignReviewerCalendarPage = () => {
 
   const formattedEvents = useMemo(() => {
     return designWorks.map(w => {
-      const order = w.expand?.order_id || {};
-      const designer = w.expand?.designer_id || {};
-      const crewNames = w.assigned_crews && w.assigned_crews.length > 0 
-        ? w.assigned_crews.map(c => c.name).join(', ') 
+      const order = w.order || {};
+      const designer = w.designer || {};
+      const crewNames = w.assigned_crews && w.assigned_crews.length > 0
+        ? w.assigned_crews.map(c => c.name).join(', ')
         : null;
 
       return {
@@ -32,12 +32,11 @@ const DesignReviewerCalendarPage = () => {
         id: order.id || w.id,
         design_work_id: w.id,
         event_name: `${order.event_name || 'Unnamed Event'} (${designer.name || 'Unassigned'})`,
-        event_date: order.event_date || w.created,
+        event_date: order.event_date || w.created_at,
         status: w.status || 'pending',
         design_file_link: w.design_file_link,
         designer_name: designer.name,
         crew_names: crewNames,
-        expand: { ...order.expand }
       };
     });
   }, [designWorks]);

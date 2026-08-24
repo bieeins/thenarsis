@@ -128,14 +128,14 @@ const FinancialDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-5xl font-bold tracking-tight font-numeric text-foreground mb-4">
-                  IDR {data.totals.netProfit.toLocaleString()}
+                  IDR {Math.round(data.totals.netProfit).toLocaleString('id-ID')}
                 </div>
                 <div className="flex gap-4 text-sm font-medium">
                   <div className="flex items-center gap-1 text-revenue">
-                    <TrendingUp className="w-4 h-4" /> Revenue: {data.totals.totalRevenue.toLocaleString()}
+                    <TrendingUp className="w-4 h-4" /> Revenue: {Math.round(data.totals.totalRevenue).toLocaleString('id-ID')}
                   </div>
                   <div className="flex items-center gap-1 text-expense">
-                    <TrendingDown className="w-4 h-4" /> Expenses: {data.totals.totalExpenses.toLocaleString()}
+                    <TrendingDown className="w-4 h-4" /> Expenses: {Math.round(data.totals.totalExpenses).toLocaleString('id-ID')}
                   </div>
                 </div>
               </CardContent>
@@ -147,7 +147,7 @@ const FinancialDashboard = () => {
                 <DollarSign className="w-4 h-4 text-revenue" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold font-numeric">IDR {data.currentMonth.revenue.toLocaleString()}</div>
+                <div className="text-2xl font-bold font-numeric">IDR {Math.round(data.currentMonth.revenue).toLocaleString('id-ID')}</div>
                 <p className="text-xs text-muted-foreground mt-1">{data.currentMonth.ordersCount} new orders</p>
               </CardContent>
             </Card>
@@ -158,7 +158,7 @@ const FinancialDashboard = () => {
                 <Receipt className="w-4 h-4 text-expense" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold font-numeric">IDR {data.currentMonth.expenses.toLocaleString()}</div>
+                <div className="text-2xl font-bold font-numeric">IDR {Math.round(data.currentMonth.expenses).toLocaleString('id-ID')}</div>
               </CardContent>
             </Card>
 
@@ -179,7 +179,7 @@ const FinancialDashboard = () => {
                 <DollarSign className="w-4 h-4 text-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold font-numeric text-profit">IDR {data.totals.cashBalance.toLocaleString()}</div>
+                <div className="text-2xl font-bold font-numeric text-profit">IDR {Math.round(data.totals.cashBalance).toLocaleString('id-ID')}</div>
               </CardContent>
             </Card>
           </div>
@@ -197,7 +197,7 @@ const FinancialDashboard = () => {
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
                       <YAxis tickFormatter={(val) => `Rp${val/1000}k`} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
-                      <Tooltip formatter={(value) => `IDR ${value.toLocaleString()}`} cursor={{ fill: 'hsl(var(--muted))', opacity: 0.4 }} />
+                      <Tooltip formatter={(value) => `IDR ${Math.round(value).toLocaleString('id-ID')}`} cursor={{ fill: 'hsl(var(--muted))', opacity: 0.4 }} />
                       <Legend iconType="circle" />
                       <Bar dataKey="Revenue" fill="hsl(var(--revenue))" radius={[4, 4, 0, 0]} maxBarSize={40} />
                       <Bar dataKey="Expenses" fill="hsl(var(--expense))" radius={[4, 4, 0, 0]} maxBarSize={40} />
@@ -221,7 +221,7 @@ const FinancialDashboard = () => {
                         <Pie data={data.expenseBreakdown} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
                           {data.expenseBreakdown.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                         </Pie>
-                        <Tooltip formatter={(value) => `IDR ${value.toLocaleString()}`} />
+                        <Tooltip formatter={(value) => `IDR ${Math.round(value).toLocaleString('id-ID')}`} />
                         <Legend verticalAlign="bottom" height={36} iconType="circle" />
                       </PieChart>
                     </ResponsiveContainer>
@@ -247,7 +247,7 @@ const FinancialDashboard = () => {
                           <p className="font-medium text-sm">Payment via {p.payment_method}</p>
                           <p className="text-xs text-muted-foreground">{format(new Date(p.payment_date), 'MMM dd, yyyy')}</p>
                         </div>
-                        <div className="font-numeric font-medium text-revenue">+IDR {p.amount.toLocaleString()}</div>
+                        <div className="font-numeric font-medium text-revenue">+IDR {Math.round(p.amount).toLocaleString('id-ID')}</div>
                       </div>
                     ))
                   }
@@ -269,7 +269,7 @@ const FinancialDashboard = () => {
                           <p className="font-medium text-sm capitalize">{e.category.replace('_', ' ')}</p>
                           <p className="text-xs text-muted-foreground">{format(new Date(e.transaction_date), 'MMM dd, yyyy')}</p>
                         </div>
-                        <div className="font-numeric font-medium text-expense">-IDR {e.amount.toLocaleString()}</div>
+                        <div className="font-numeric font-medium text-expense">-IDR {Math.round(e.amount).toLocaleString('id-ID')}</div>
                       </div>
                     ))
                   }

@@ -78,15 +78,15 @@ const CashFlowPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <Card className="border-0 shadow-md border-l-4 border-revenue">
               <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Cash In</CardTitle></CardHeader>
-              <CardContent><div className="text-2xl font-bold font-numeric text-revenue">Rp {data.totalIn.toLocaleString()}</div></CardContent>
+              <CardContent><div className="text-2xl font-bold font-numeric text-revenue">Rp {Math.round(data.totalIn).toLocaleString('id-ID')}</div></CardContent>
             </Card>
             <Card className="border-0 shadow-md border-l-4 border-expense">
               <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Cash Out</CardTitle></CardHeader>
-              <CardContent><div className="text-2xl font-bold font-numeric text-expense">Rp {data.totalOut.toLocaleString()}</div></CardContent>
+              <CardContent><div className="text-2xl font-bold font-numeric text-expense">Rp {Math.round(data.totalOut).toLocaleString('id-ID')}</div></CardContent>
             </Card>
             <Card className="border-0 shadow-md bg-secondary text-secondary-foreground border-l-4 border-primary">
               <CardHeader className="pb-2"><CardTitle className="text-sm font-medium opacity-80">Net Cash Flow</CardTitle></CardHeader>
-              <CardContent><div className="text-2xl font-bold font-numeric text-primary">Rp {data.net.toLocaleString()}</div></CardContent>
+              <CardContent><div className="text-2xl font-bold font-numeric text-primary">Rp {Math.round(data.net).toLocaleString('id-ID')}</div></CardContent>
             </Card>
           </div>
 
@@ -99,7 +99,7 @@ const CashFlowPage = () => {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} />
                     <YAxis tickFormatter={(val) => `Rp${val/1000}k`} axisLine={false} tickLine={false} />
-                    <Tooltip formatter={(value) => `IDR ${value.toLocaleString()}`} />
+                    <Tooltip formatter={(value) => `IDR ${Math.round(value).toLocaleString('id-ID')}`} />
                     <Line type="monotone" dataKey="Balance" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, fill: "hsl(var(--primary))" }} />
                   </LineChart>
                 </ResponsiveContainer>

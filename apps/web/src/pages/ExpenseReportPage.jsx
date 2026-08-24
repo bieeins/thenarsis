@@ -117,7 +117,7 @@ const ExpenseReportPage = () => {
                         <TableCell className="capitalize whitespace-nowrap">{exp.category.replace('_', ' ')}</TableCell>
                         <TableCell className="truncate max-w-[250px]" dangerouslySetInnerHTML={{ __html: exp.description || '-' }}></TableCell>
                         <TableCell className="whitespace-nowrap">{userMap[exp.uploaded_by_id]?.name || 'Unknown'}</TableCell>
-                        <TableCell className="text-right font-numeric font-medium text-expense">Rp {exp.amount.toLocaleString()}</TableCell>
+                        <TableCell className="text-right font-numeric font-medium text-expense">Rp {Math.round(exp.amount).toLocaleString('id-ID')}</TableCell>
                         <TableCell className="text-right">
                           {exp.receipt_file ? (
                             <button

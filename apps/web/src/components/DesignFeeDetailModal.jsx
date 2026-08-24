@@ -130,8 +130,8 @@ const DesignFeeDetailModal = ({ isOpen, onClose, feeRecord, onSave }) => {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Amount:</span>
                   <span className="font-numeric">
-                    <span className="line-through opacity-50 mr-2">Rp {feeRecord.fee_amount?.toLocaleString('id-ID') || '0'}</span>
-                    <span className="font-bold text-foreground">Rp {Number(amount).toLocaleString('id-ID')}</span>
+                    <span className="line-through opacity-50 mr-2">Rp {feeRecord.fee_amount ? Math.round(Number(feeRecord.fee_amount)).toLocaleString('id-ID') : '0'}</span>
+                    <span className="font-bold text-foreground">Rp {Math.round(Number(amount)).toLocaleString('id-ID')}</span>
                   </span>
                 </div>
               )}

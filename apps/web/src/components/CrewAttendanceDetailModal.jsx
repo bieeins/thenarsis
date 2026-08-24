@@ -180,8 +180,8 @@ const CrewAttendanceDetailModal = ({ isOpen, onClose, assignmentRecord, onSave }
                 <div className="flex justify-between mt-2 pt-2 border-t">
                   <span className="text-muted-foreground">Amount:</span>
                   <span className="font-numeric">
-                    <span className="line-through opacity-50 mr-2">Rp {assignmentRecord.attendance_amount?.toLocaleString('id-ID') || '0'}</span>
-                    <span className="font-bold text-foreground">Rp {amount ? Number(amount).toLocaleString('id-ID') : '0'}</span>
+                    <span className="line-through opacity-50 mr-2">Rp {assignmentRecord.attendance_amount ? Math.round(Number(assignmentRecord.attendance_amount)).toLocaleString('id-ID') : '0'}</span>
+                    <span className="font-bold text-foreground">Rp {amount ? Math.round(Number(amount)).toLocaleString('id-ID') : '0'}</span>
                   </span>
                 </div>
               )}

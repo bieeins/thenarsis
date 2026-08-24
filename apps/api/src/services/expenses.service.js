@@ -1,6 +1,13 @@
 import { expensesRepository } from '../repositories/expenses.repository.js';
+import { expenseCategoriesRepository } from '../repositories/expense-categories.repository.js';
 import { parsePagination, parseSort } from '../utils/pagination.js';
-import { notFound } from '../utils/http-error.js';
+import { badRequest, notFound } from '../utils/http-error.js';
+
+async function assertCategoryExists(name) {
+  if (!name) return;
+  const category = await expenseCategoriesRepository.findByName(name);
+  if (!category) throw badRequest(`Unknown expense category "${name}". Add it under Financial Settings first.`);
+}
 
 const SORTABLE_FIELDS = ['created_at', 'transaction_date', 'amount', 'category'];
 
@@ -22,11 +29,13 @@ export const expensesService = {
   },
 
   async create(data) {
+    await assertCategoryExists(data.category);
     return expensesRepository.create(data);
   },
 
   async update(id, data) {
     await this.get(id);
+    await assertCategoryExists(data.category);
     return expensesRepository.update(id, data);
   },
 

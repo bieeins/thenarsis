@@ -58,7 +58,7 @@ const FinancialAnalyticsPage = () => {
             <Card className="border-0 shadow-md">
               <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Avg Revenue per Order</CardTitle></CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold font-numeric text-revenue">Rp {Math.round(data.revenuePerOrder).toLocaleString()}</div>
+                <div className="text-3xl font-bold font-numeric text-revenue">Rp {Math.round(data.revenuePerOrder).toLocaleString('id-ID')}</div>
                 <p className="text-xs text-muted-foreground mt-2">Based on {data.totalOrders} total orders</p>
               </CardContent>
             </Card>

@@ -238,10 +238,10 @@ const OrderManagementPage = () => {
                           </TableCell>
 
                           <TableCell className="text-right font-medium whitespace-nowrap">
-                            IDR {order.totalAmount.toLocaleString()}
+                            IDR {Math.round(order.totalAmount).toLocaleString('id-ID')}
                           </TableCell>
                           <TableCell className="text-right text-green-600 font-medium whitespace-nowrap">
-                            IDR {order.paymentsReceived.toLocaleString()}
+                            IDR {Math.round(order.paymentsReceived).toLocaleString('id-ID')}
                           </TableCell>
                           <TableCell className="text-right pr-6 whitespace-nowrap">
                             <Link to={`/order/${order.id}`}>

@@ -78,7 +78,7 @@ export const useCrewEvents = () => {
             event_time: order.event_time || order.event_date || null,
             event_location: order.event_location || 'Location TBD',
             status: order.status || 'Pending',
-            notes: order.notes || '',
+            notes: order.description || '',
 
             product_id: order.product_id || null,
             package_name: product?.package_name || 'Custom Package',

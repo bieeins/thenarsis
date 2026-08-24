@@ -15,6 +15,7 @@ import { expenseService } from '@/services/expenseService.js';
 import { userService } from '@/services/userService.js';
 import { designIncomeService } from '@/services/designIncomeService.js';
 import { crewAssignmentService } from '@/services/crewAssignmentService.js';
+import { formatRupiah } from '@/lib/currency.js';
 
 const OwnerDashboard = () => {
   const [stats, setStats] = useState({
@@ -145,7 +146,7 @@ const OwnerDashboard = () => {
                 <Activity className="w-4 h-4 opacity-80" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold font-numeric">IDR {stats.netRevenue.toLocaleString()}</div>
+                <div className="text-2xl font-bold font-numeric">{formatRupiah(stats.netRevenue)}</div>
               </CardContent>
             </Card>
 
@@ -155,7 +156,7 @@ const OwnerDashboard = () => {
                 <TrendingUp className="w-4 h-4 text-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-foreground font-numeric">IDR {stats.grossRevenue.toLocaleString()}</div>
+                <div className="text-2xl font-bold text-foreground font-numeric">{formatRupiah(stats.grossRevenue)}</div>
               </CardContent>
             </Card>
 
@@ -165,7 +166,7 @@ const OwnerDashboard = () => {
                 <Wallet className="w-4 h-4 text-red-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-600 dark:text-red-400 font-numeric">- IDR {(stats.totalDesignFees + stats.totalCrewAmounts).toLocaleString()}</div>
+                <div className="text-2xl font-bold text-red-600 dark:text-red-400 font-numeric">- {formatRupiah(stats.totalDesignFees + stats.totalCrewAmounts)}</div>
               </CardContent>
             </Card>
 
@@ -256,7 +257,7 @@ const OwnerDashboard = () => {
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(value) => `IDR ${value.toLocaleString()}`} />
+                        <Tooltip formatter={(value) => formatRupiah(value)} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
@@ -296,8 +297,8 @@ const OwnerDashboard = () => {
                           <td className="px-4 py-4">
                             <span className={`${getStatusColor(order.status)} inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold`}>{order.status}</span>
                           </td>
-                          <td className="px-4 py-4 text-right font-numeric">IDR {order.totalAmount.toLocaleString()}</td>
-                          <td className="px-4 py-4 text-right text-revenue font-numeric font-medium">IDR {order.paymentsReceived.toLocaleString()}</td>
+                          <td className="px-4 py-4 text-right font-numeric">{formatRupiah(order.totalAmount)}</td>
+                          <td className="px-4 py-4 text-right text-revenue font-numeric font-medium">{formatRupiah(order.paymentsReceived)}</td>
                         </tr>
                       ))}
                       {recentOrders.length === 0 && (
