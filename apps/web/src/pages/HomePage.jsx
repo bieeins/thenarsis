@@ -90,7 +90,7 @@ const HomePage = () => {
           </div>
         </section>
 
-        <section className="py-20 bg-secondary">
+        {/* <section className="py-20 bg-secondary">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to transform your workflow?</h2>
             <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
@@ -102,7 +102,7 @@ const HomePage = () => {
               </Button>
             </Link>
           </div>
-        </section>
+        </section> */}
       </div>
     </>
   );
