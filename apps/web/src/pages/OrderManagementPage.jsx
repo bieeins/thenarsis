@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -13,7 +15,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Eye, RefreshCw } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2, RefreshCw, ChevronUp, ChevronDown, FilterX } from 'lucide-react';
 import { toast } from 'sonner';
 import { orderService } from '@/services/orderService.js';
 import { invoiceService } from '@/services/invoiceService.js';
@@ -23,12 +25,19 @@ import { format } from 'date-fns';
 import OrderForm from '@/components/OrderForm';
 import AssignDesignerModal from '@/components/AssignDesignerModal';
 import AssignCrewModal from '@/components/AssignCrewModal';
+import { formatRupiah } from '@/lib/currency.js';
 
 const OrderManagementPage = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(null);
+
+  // Date filter (by event date) + column sorting
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
   // Modals state
   const [designerModalState, setDesignerModalState] = useState({ open: false, orderId: null });
@@ -112,6 +121,103 @@ const OrderManagementPage = () => {
     setCrewModalState({ open: true, orderId });
   };
 
+  const handleCreate = () => {
+    setEditingOrder(null);
+    setFormOpen(true);
+  };
+
+  const handleEdit = (order) => {
+    setEditingOrder(order);
+    setFormOpen(true);
+  };
+
+  const handleFormOpenChange = (open) => {
+    setFormOpen(open);
+    if (!open) setEditingOrder(null);
+  };
+
+  const handleDelete = async (order) => {
+    if (!window.confirm(`Delete the order for "${order.customer_name}"? This also removes its invoice, payments, and assignments.`)) return;
+
+    try {
+      await orderService.remove(order.id);
+      toast.success('Order deleted successfully');
+      loadOrders();
+    } catch (error) {
+      toast.error(error.message || 'Failed to delete order');
+    }
+  };
+
+  const handleSort = (key) => {
+    setSortConfig((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
+
+  const renderSortIcon = (key) => {
+    if (sortConfig.key !== key) return <ChevronDown className="w-3.5 h-3.5 text-muted-foreground/30" />;
+    return sortConfig.direction === 'asc'
+      ? <ChevronUp className="w-3.5 h-3.5 text-primary" />
+      : <ChevronDown className="w-3.5 h-3.5 text-primary" />;
+  };
+
+  const clearDateFilter = () => {
+    setDateFrom('');
+    setDateTo('');
+  };
+
+  const visibleOrders = useMemo(() => {
+    let result = [...orders];
+
+    // Compare using the same local-timezone date the "Date" column displays
+    // (via date-fns `format`), not a raw UTC slice — the API returns
+    // event_date as a UTC timestamp, which can land on the previous day
+    // when sliced directly.
+    const localDateKey = (value) => {
+      if (!value) return null;
+      try {
+        return format(new Date(value), 'yyyy-MM-dd');
+      } catch {
+        return null;
+      }
+    };
+
+    if (dateFrom) {
+      result = result.filter((o) => {
+        const key = localDateKey(o.event_date);
+        return key && key >= dateFrom;
+      });
+    }
+    if (dateTo) {
+      result = result.filter((o) => {
+        const key = localDateKey(o.event_date);
+        return key && key <= dateTo;
+      });
+    }
+
+    if (sortConfig.key) {
+      const { key, direction } = sortConfig;
+      result.sort((a, b) => {
+        let valA;
+        let valB;
+        switch (key) {
+          case 'customer_name': valA = (a.customer_name || '').toLowerCase(); valB = (b.customer_name || '').toLowerCase(); break;
+          case 'event_date': valA = a.event_date || ''; valB = b.event_date || ''; break;
+          case 'status': valA = (a.status || '').toLowerCase(); valB = (b.status || '').toLowerCase(); break;
+          case 'totalAmount': valA = a.totalAmount || 0; valB = b.totalAmount || 0; break;
+          case 'paymentsReceived': valA = a.paymentsReceived || 0; valB = b.paymentsReceived || 0; break;
+          default: valA = ''; valB = ''; break;
+        }
+        if (valA < valB) return direction === 'asc' ? -1 : 1;
+        if (valA > valB) return direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return result;
+  }, [orders, dateFrom, dateTo, sortConfig]);
+
   return (
     <>
       <Helmet>
@@ -131,12 +237,48 @@ const OrderManagementPage = () => {
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
-              <Button onClick={() => setFormOpen(true)}>
+              <Button onClick={handleCreate}>
                 <Plus className="w-4 h-4 mr-2" />
                 Create Order
               </Button>
             </div>
           </div>
+
+          <Card className="shadow-sm border-0 mb-6">
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex flex-wrap items-end gap-4">
+                <div>
+                  <Label htmlFor="dateFrom" className="text-xs text-muted-foreground">Event Date From</Label>
+                  <Input
+                    id="dateFrom"
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="h-9 w-[170px]"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="dateTo" className="text-xs text-muted-foreground">Event Date To</Label>
+                  <Input
+                    id="dateTo"
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="h-9 w-[170px]"
+                  />
+                </div>
+                {(dateFrom || dateTo) && (
+                  <Button variant="ghost" size="sm" onClick={clearDateFilter} className="text-muted-foreground">
+                    <FilterX className="w-4 h-4 mr-2" />
+                    Clear
+                  </Button>
+                )}
+                <div className="text-xs text-muted-foreground ml-auto">
+                  Showing {visibleOrders.length} of {orders.length} orders
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           <Card className="shadow-lg border-0 overflow-hidden">
             <CardHeader className="bg-white border-b border-border">
@@ -158,9 +300,17 @@ const OrderManagementPage = () => {
               ) : orders.length === 0 ? (
                 <div className="text-center py-16">
                   <p className="text-muted-foreground mb-4">No orders yet</p>
-                  <Button onClick={() => setFormOpen(true)}>
+                  <Button onClick={handleCreate}>
                     <Plus className="w-4 h-4 mr-2" />
                     Create Your First Order
+                  </Button>
+                </div>
+              ) : visibleOrders.length === 0 ? (
+                <div className="text-center py-16">
+                  <p className="text-muted-foreground mb-4">No orders match the selected date range</p>
+                  <Button variant="outline" onClick={clearDateFilter}>
+                    <FilterX className="w-4 h-4 mr-2" />
+                    Clear Filter
                   </Button>
                 </div>
               ) : (
@@ -168,19 +318,29 @@ const OrderManagementPage = () => {
                   <Table>
                     <TableHeader className="bg-muted/50 whitespace-nowrap">
                       <TableRow>
-                        <TableHead className="pl-6">Customer</TableHead>
+                        <TableHead className="pl-6 cursor-pointer select-none" onClick={() => handleSort('customer_name')}>
+                          <span className="inline-flex items-center gap-1">Customer {renderSortIcon('customer_name')}</span>
+                        </TableHead>
                         <TableHead>Event</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead className="cursor-pointer select-none" onClick={() => handleSort('event_date')}>
+                          <span className="inline-flex items-center gap-1">Date {renderSortIcon('event_date')}</span>
+                        </TableHead>
+                        <TableHead className="cursor-pointer select-none" onClick={() => handleSort('status')}>
+                          <span className="inline-flex items-center gap-1">Status {renderSortIcon('status')}</span>
+                        </TableHead>
                         <TableHead>Designer</TableHead>
                         <TableHead>Crew</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
-                        <TableHead className="text-right">Paid</TableHead>
+                        <TableHead className="text-right cursor-pointer select-none" onClick={() => handleSort('totalAmount')}>
+                          <span className="inline-flex items-center gap-1 justify-end">Total {renderSortIcon('totalAmount')}</span>
+                        </TableHead>
+                        <TableHead className="text-right cursor-pointer select-none" onClick={() => handleSort('paymentsReceived')}>
+                          <span className="inline-flex items-center gap-1 justify-end">Paid {renderSortIcon('paymentsReceived')}</span>
+                        </TableHead>
                         <TableHead className="text-right pr-6">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {orders.map((order) => (
+                      {visibleOrders.map((order) => (
                         <TableRow key={order.id} className="hover:bg-muted/30">
                           <TableCell className="pl-6 font-medium text-foreground whitespace-nowrap">
                             {order.customer_name}
@@ -238,18 +398,30 @@ const OrderManagementPage = () => {
                           </TableCell>
 
                           <TableCell className="text-right font-medium whitespace-nowrap">
-                            IDR {Math.round(order.totalAmount).toLocaleString('id-ID')}
+                            {formatRupiah(order.totalAmount)}
                           </TableCell>
                           <TableCell className="text-right text-green-600 font-medium whitespace-nowrap">
-                            IDR {Math.round(order.paymentsReceived).toLocaleString('id-ID')}
+                            {formatRupiah(order.paymentsReceived)}
                           </TableCell>
                           <TableCell className="text-right pr-6 whitespace-nowrap">
-                            <Link to={`/order/${order.id}`}>
-                              <Button variant="ghost" size="sm" className="hover:bg-primary/10 hover:text-primary">
-                                <Eye className="w-4 h-4 mr-2" />
-                                View
+                            <div className="flex justify-end gap-1">
+                              <Link to={`/order/${order.id}`}>
+                                <Button variant="ghost" size="sm" className="hover:bg-primary/10 hover:text-primary">
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                              </Link>
+                              <Button variant="ghost" size="sm" onClick={() => handleEdit(order)}>
+                                <Pencil className="w-4 h-4" />
                               </Button>
-                            </Link>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(order)}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -264,7 +436,8 @@ const OrderManagementPage = () => {
 
       <OrderForm
         open={formOpen}
-        onOpenChange={setFormOpen}
+        onOpenChange={handleFormOpenChange}
+        order={editingOrder}
         onSuccess={loadOrders}
       />
 

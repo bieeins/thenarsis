@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge.jsx';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar.jsx';
 import { useIsMobile } from '@/hooks/use-mobile.jsx';
 import DownloadFilesModal from '@/components/DownloadFilesModal.jsx';
+import { formatRupiah } from '@/lib/currency.js';
 import { 
   ChevronUp, ChevronDown, Calendar, Search, FilterX, AlertCircle, 
   RefreshCcw, Loader2, ArrowLeft, ArrowRight, MapPin, Banknote, 
@@ -184,7 +185,7 @@ const CrewEventDataTable = ({ events = [], loading, error, onToggleAttendance, o
     }
   };
 
-  const formatCurrency = (amount) => amount ? `Rp ${Math.round(Number(amount)).toLocaleString('id-ID')}` : 'Rp 0';
+  const formatCurrency = (amount) => amount ? formatRupiah(amount) : formatRupiah(0);
 
   if (loading) {
     return (

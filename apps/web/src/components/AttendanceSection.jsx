@@ -7,6 +7,7 @@ import { CheckCircle2, Banknote, Clock, ClipboardSignature, Loader2 } from 'luci
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { crewAssignmentService } from '@/services/crewAssignmentService.js';
+import { formatRupiah } from '@/lib/currency.js';
 
 const AttendanceSection = ({ 
   assignmentId, 
@@ -20,10 +21,10 @@ const AttendanceSection = ({
 
   const formatCurrency = (amt) => {
     try {
-      if (!amt || isNaN(Number(amt))) return 'Rp 0';
-      return `Rp ${Math.round(Number(amt)).toLocaleString('id-ID')}`;
+      if (!amt || isNaN(Number(amt))) return formatRupiah(0);
+      return formatRupiah(amt);
     } catch {
-      return 'Rp 0';
+      return formatRupiah(0);
     }
   };
 

@@ -15,6 +15,7 @@ import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import ProductForm from '@/components/ProductForm';
 import { productService } from '@/services/productService.js';
+import { formatRupiah } from '@/lib/currency.js';
 
 const ProductManagementPage = () => {
   const [products, setProducts] = useState([]);
@@ -134,7 +135,7 @@ const ProductManagementPage = () => {
                             {product.category}
                           </Badge>
                         </TableCell>
-                        <TableCell>IDR {Math.round(product.base_price).toLocaleString('id-ID')}</TableCell>
+                        <TableCell>{formatRupiah(product.base_price)}</TableCell>
                         <TableCell className="max-w-xs truncate">
                           {product.description || '-'}
                         </TableCell>

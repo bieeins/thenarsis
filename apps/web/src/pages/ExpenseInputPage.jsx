@@ -22,6 +22,7 @@ import { expenseService } from '@/services/expenseService.js';
 import { expenseCategoryService } from '@/services/expenseCategoryService.js';
 import { fileService } from '@/services/fileService.js';
 import { userService } from '@/services/userService.js';
+import { formatRupiah } from '@/lib/currency.js';
 
 const ExpenseInputPage = () => {
   const { currentUser } = useAuth();
@@ -251,7 +252,7 @@ const ExpenseInputPage = () => {
                       </div>
                       <div>
                         <p className="text-sm font-medium opacity-90">Total Filtered</p>
-                        <p className="text-3xl font-bold">IDR {Math.round(totalFiltered).toLocaleString('id-ID')}</p>
+                        <p className="text-3xl font-bold">{formatRupiah(totalFiltered)}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -280,7 +281,7 @@ const ExpenseInputPage = () => {
                       {Object.entries(expensesByCategory).map(([cat, amount]) => (
                         <div key={cat} className="flex justify-between items-center">
                           <span className="capitalize">{cat.replace('_', ' ')}</span>
-                          <span className="font-semibold">IDR {Math.round(amount).toLocaleString('id-ID')}</span>
+                          <span className="font-semibold">{formatRupiah(amount)}</span>
                         </div>
                       ))}
                     </div>
@@ -304,7 +305,7 @@ const ExpenseInputPage = () => {
                         <div key={expense.id} className="flex flex-col sm:flex-row justify-between p-4 rounded-xl border bg-card hover:shadow-md transition-shadow">
                           <div className="mb-2 sm:mb-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="font-semibold text-lg">IDR {Math.round(expense.amount).toLocaleString('id-ID')}</span>
+                              <span className="font-semibold text-lg">{formatRupiah(expense.amount)}</span>
                               <Badge variant="outline" className="capitalize text-xs">
                                 {expense.category.replace('_', ' ')}
                               </Badge>

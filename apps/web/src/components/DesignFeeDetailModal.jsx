@@ -8,6 +8,7 @@ import { Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { designIncomeService } from '@/services/designIncomeService.js';
 import { format } from 'date-fns';
+import { formatRupiah } from '@/lib/currency.js';
 
 const DesignFeeDetailModal = ({ isOpen, onClose, feeRecord, onSave }) => {
   const [amount, setAmount] = useState('');
@@ -130,8 +131,8 @@ const DesignFeeDetailModal = ({ isOpen, onClose, feeRecord, onSave }) => {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Amount:</span>
                   <span className="font-numeric">
-                    <span className="line-through opacity-50 mr-2">Rp {feeRecord.fee_amount ? Math.round(Number(feeRecord.fee_amount)).toLocaleString('id-ID') : '0'}</span>
-                    <span className="font-bold text-foreground">Rp {Math.round(Number(amount)).toLocaleString('id-ID')}</span>
+                    <span className="line-through opacity-50 mr-2">{formatRupiah(feeRecord.fee_amount || 0)}</span>
+                    <span className="font-bold text-foreground">{formatRupiah(amount || 0)}</span>
                   </span>
                 </div>
               )}

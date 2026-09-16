@@ -9,6 +9,7 @@ import { Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { crewAssignmentService } from '@/services/crewAssignmentService.js';
 import { format } from 'date-fns';
+import { formatRupiah } from '@/lib/currency.js';
 
 const CrewAttendanceDetailModal = ({ isOpen, onClose, assignmentRecord, onSave }) => {
   const [status, setStatus] = useState('');
@@ -180,8 +181,8 @@ const CrewAttendanceDetailModal = ({ isOpen, onClose, assignmentRecord, onSave }
                 <div className="flex justify-between mt-2 pt-2 border-t">
                   <span className="text-muted-foreground">Amount:</span>
                   <span className="font-numeric">
-                    <span className="line-through opacity-50 mr-2">Rp {assignmentRecord.attendance_amount ? Math.round(Number(assignmentRecord.attendance_amount)).toLocaleString('id-ID') : '0'}</span>
-                    <span className="font-bold text-foreground">Rp {amount ? Math.round(Number(amount)).toLocaleString('id-ID') : '0'}</span>
+                    <span className="line-through opacity-50 mr-2">{formatRupiah(assignmentRecord.attendance_amount || 0)}</span>
+                    <span className="font-bold text-foreground">{formatRupiah(amount || 0)}</span>
                   </span>
                 </div>
               )}

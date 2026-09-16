@@ -9,6 +9,7 @@ import { MapPin, Calendar, Clock, User, Banknote, ChevronRight, Package, File, L
 import { toast } from 'sonner';
 import { crewAssignmentService } from '@/services/crewAssignmentService.js';
 import DownloadFilesModal from '@/components/DownloadFilesModal.jsx';
+import { formatRupiah } from '@/lib/currency.js';
 
 const CrewEventCard = ({ event }) => {
   const navigate = useNavigate();
@@ -112,10 +113,10 @@ const CrewEventCard = ({ event }) => {
 
   const formatCurrency = (amt) => {
     try {
-      if (amt === undefined || amt === null || isNaN(Number(amt))) return 'Rp 0';
-      return `Rp ${Math.round(Number(amt)).toLocaleString('id-ID')}`;
+      if (amt === undefined || amt === null || isNaN(Number(amt))) return formatRupiah(0);
+      return formatRupiah(amt);
     } catch (err) {
-      return 'Rp 0';
+      return formatRupiah(0);
     }
   };
 

@@ -1,6 +1,26 @@
 import { invoicesRepository } from '../repositories/invoices.repository.js';
+import { ordersRepository } from '../repositories/orders.repository.js';
+import { paymentsRepository } from '../repositories/payments.repository.js';
 import { parsePagination, parseSort } from '../utils/pagination.js';
 import { notFound } from '../utils/http-error.js';
+
+// Only the fields a customer needs to read their own invoice — never the
+// internal assignment/notes fields that come back on the authenticated
+// order record.
+function toPublicOrder(order) {
+  if (!order) return null;
+  return {
+    customer_name: order.customer_name,
+    phone_number: order.phone_number,
+    event_name: order.event_name,
+    event_date: order.event_date,
+    event_location: order.event_location,
+    product: order.product ? {
+      package_name: order.product.package_name,
+      description: order.product.description,
+    } : null,
+  };
+}
 
 const SORTABLE_FIELDS = ['created_at', 'invoice_number', 'total_amount'];
 
@@ -26,6 +46,18 @@ export const invoicesService = {
     const invoice = await invoicesRepository.findByInvoiceNumber(invoiceNumber);
     if (!invoice) throw notFound('Invoice not found');
     return invoice;
+  },
+
+  // Same public lookup, but also includes the customer/event details a
+  // shared invoice link needs to render — without requiring the viewer to
+  // log in (the orders API itself stays authenticated for everything else).
+  async getPublicSummaryByInvoiceNumber(invoiceNumber) {
+    const invoice = await this.getByInvoiceNumber(invoiceNumber);
+    const [payments, order] = await Promise.all([
+      paymentsRepository.listByInvoiceId(invoice.id),
+      ordersRepository.findByIdExpanded(invoice.order_id),
+    ]);
+    return { ...invoice, payments, order: toPublicOrder(order) };
   },
 
   async create(data) {

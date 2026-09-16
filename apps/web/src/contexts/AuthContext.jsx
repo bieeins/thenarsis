@@ -6,6 +6,13 @@ import { apiClient, ApiError, setAccessToken } from '@/lib/apiClient.js';
 
 const AuthContext = createContext(null);
 
+// Routes that render without a session (see App.jsx) — a failed session
+// refresh on one of these must not bounce the visitor to /login, since
+// they were never expected to be signed in there in the first place.
+const isPublicPath = (pathname) => (
+  pathname === '/' || pathname === '/login' || pathname === '/signup' || pathname.startsWith('/invoice/')
+);
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -31,7 +38,7 @@ export const AuthProvider = ({ children }) => {
         setAccessToken(null);
         setCurrentUser(null);
         setIsAuthenticated(false);
-        if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+        if (!isPublicPath(window.location.pathname)) {
           toast.error('Your session has expired. Please log in again.');
           navigate('/login');
         }

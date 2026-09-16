@@ -1,5 +1,4 @@
 import { invoicesService } from '../services/invoices.service.js';
-import { paymentsRepository } from '../repositories/payments.repository.js';
 import { ok, created, paginated } from '../utils/response.js';
 
 export const invoicesController = {
@@ -19,9 +18,7 @@ export const invoicesController = {
   // Public — matches PocketBase's public viewRule on invoices, used by InvoiceViewPage.
   async getPublicByNumber(req, res, next) {
     try {
-      const invoice = await invoicesService.getByInvoiceNumber(req.params.invoiceNumber);
-      const payments = await paymentsRepository.listByInvoiceId(invoice.id);
-      ok(res, { ...invoice, payments });
+      ok(res, await invoicesService.getPublicSummaryByInvoiceNumber(req.params.invoiceNumber));
     } catch (err) { next(err); }
   },
 

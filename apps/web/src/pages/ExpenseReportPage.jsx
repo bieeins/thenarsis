@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { expenseService } from '@/services/expenseService.js';
 import { userService } from '@/services/userService.js';
 import { fileService } from '@/services/fileService.js';
+import { formatRupiah } from '@/lib/currency.js';
 
 const ExpenseReportPage = () => {
   const [expenses, setExpenses] = useState([]);
@@ -117,7 +118,7 @@ const ExpenseReportPage = () => {
                         <TableCell className="capitalize whitespace-nowrap">{exp.category.replace('_', ' ')}</TableCell>
                         <TableCell className="truncate max-w-[250px]" dangerouslySetInnerHTML={{ __html: exp.description || '-' }}></TableCell>
                         <TableCell className="whitespace-nowrap">{userMap[exp.uploaded_by_id]?.name || 'Unknown'}</TableCell>
-                        <TableCell className="text-right font-numeric font-medium text-expense">Rp {Math.round(exp.amount).toLocaleString('id-ID')}</TableCell>
+                        <TableCell className="text-right font-numeric font-medium text-expense">{formatRupiah(exp.amount)}</TableCell>
                         <TableCell className="text-right">
                           {exp.receipt_file ? (
                             <button

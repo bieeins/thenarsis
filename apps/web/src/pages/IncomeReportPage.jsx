@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { invoiceService } from '@/services/invoiceService.js';
 import { paymentService } from '@/services/paymentService.js';
 import { orderService } from '@/services/orderService.js';
+import { formatRupiah } from '@/lib/currency.js';
 
 const IncomeReportPage = () => {
   const [invoices, setInvoices] = useState([]);
@@ -120,9 +121,9 @@ const IncomeReportPage = () => {
                           <TableCell className="whitespace-nowrap">{order?.customer_name}</TableCell>
                           <TableCell className="whitespace-nowrap">{order?.event_name}</TableCell>
                           <TableCell>{order?.product?.package_name}</TableCell>
-                          <TableCell className="text-right font-numeric font-medium">Rp {Math.round(inv.total_amount).toLocaleString('id-ID')}</TableCell>
-                          <TableCell className="text-right font-numeric text-revenue">Rp {Math.round(paid).toLocaleString('id-ID')}</TableCell>
-                          <TableCell className="text-right font-numeric text-pending">{pending > 0 ? `Rp ${Math.round(pending).toLocaleString('id-ID')}` : '0'}</TableCell>
+                          <TableCell className="text-right font-numeric font-medium">{formatRupiah(inv.total_amount)}</TableCell>
+                          <TableCell className="text-right font-numeric text-revenue">{formatRupiah(paid)}</TableCell>
+                          <TableCell className="text-right font-numeric text-pending">{formatRupiah(pending > 0 ? pending : 0)}</TableCell>
                         </TableRow>
                       );
                     })}

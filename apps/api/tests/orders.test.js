@@ -118,4 +118,51 @@ describe('orders + order_items', () => {
       });
     expect(res.status).toBe(403);
   });
+
+  it('deletes an order together with its invoice, payment, and crew assignment in one transaction', async () => {
+    const { user: crew } = await loginAs('crew');
+
+    const orderRes = await request(app)
+      .post('/api/orders')
+      .set(authHeader(ownerToken))
+      .send({
+        customer_name: 'To Be Deleted',
+        phone_number: '+1-555-4321',
+        event_name: 'Deletable Event',
+        event_date: '2026-09-05',
+        event_location: 'Somewhere',
+        product_id: productId,
+        status: 'Pending',
+        items: [{ product_id: productId, base_price: 500, quantity: 1 }],
+      });
+    const orderId = orderRes.body.data.id;
+
+    const invoiceRes = await request(app)
+      .post('/api/invoices')
+      .set(authHeader(ownerToken))
+      .send({ order_id: orderId, invoice_number: 'INV-DELETE-1', total_amount: 500 });
+    const invoiceId = invoiceRes.body.data.id;
+
+    await request(app)
+      .post('/api/payments')
+      .set(authHeader(ownerToken))
+      .send({
+        invoice_id: invoiceId, amount: 500, payment_date: '2026-09-01',
+        payment_method: 'Cash', payment_status: 'Confirmed',
+      });
+
+    await request(app)
+      .post('/api/crew-assignments')
+      .set(authHeader(ownerToken))
+      .send({ order_id: orderId, crew_id: crew.id, status: 'pending' });
+
+    const deleteRes = await request(app).delete(`/api/orders/${orderId}`).set(authHeader(ownerToken));
+    expect(deleteRes.status).toBe(200);
+
+    expect(await db('orders').where({ id: orderId }).first()).toBeUndefined();
+    expect(await db('order_items').where({ order_id: orderId })).toHaveLength(0);
+    expect(await db('invoices').where({ order_id: orderId })).toHaveLength(0);
+    expect(await db('payments').where({ invoice_id: invoiceId })).toHaveLength(0);
+    expect(await db('crew_assignments').where({ order_id: orderId })).toHaveLength(0);
+  });
 });

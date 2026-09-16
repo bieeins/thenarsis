@@ -61,11 +61,30 @@ export const ordersService = {
     return ordersRepository.update(id, data);
   },
 
+  // Deleting an order also removes every record that only exists because of
+  // it (order items, invoices + their payments, design work, design income,
+  // crew assignments). Notes cascade at the DB level and notifications just
+  // lose their order reference (ON DELETE SET NULL), so those need no
+  // explicit cleanup here. Everything else has a RESTRICT foreign key, so
+  // this has to run as one transaction in dependency order or the final
+  // `orders` delete would fail.
   async remove(id, requester) {
     const existing = await ordersRepository.findById(id);
     if (!existing) throw notFound('Order not found');
     if (requester.role !== 'owner') throw forbidden();
-    await ordersRepository.delete(id);
+
+    await db.transaction(async (trx) => {
+      const invoiceIds = await trx('invoices').where({ order_id: id }).pluck('id');
+      if (invoiceIds.length > 0) {
+        await trx('payments').whereIn('invoice_id', invoiceIds).delete();
+      }
+      await trx('invoices').where({ order_id: id }).delete();
+      await trx('design_income').where({ order_id: id }).delete();
+      await trx('crew_assignments').where({ order_id: id }).delete();
+      await trx('design_work').where({ order_id: id }).delete();
+      await trx('order_items').where({ order_id: id }).delete();
+      await trx('orders').where({ id }).delete();
+    });
   },
 
   async listItems(orderId, requester) {

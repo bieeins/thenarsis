@@ -25,6 +25,7 @@ import { CreditCard, Download, FileText, Send, Share2, CheckCircle2 } from 'luci
 import { invoiceService } from '@/services/invoiceService.js';
 import { paymentService } from '@/services/paymentService.js';
 import { orderService } from '@/services/orderService.js';
+import { formatRupiah } from '@/lib/currency.js';
 
 const PaymentTrackingPage = () => {
   const [invoices, setInvoices] = useState([]);
@@ -181,7 +182,7 @@ const PaymentTrackingPage = () => {
                   <strong>${invoice.order?.product?.package_name || 'Event Package'}</strong>
                 </td>
                 <td style="padding: 12px; text-align: right; border-bottom: 1px solid #eee;">
-                  IDR ${Math.round(invoice.total_amount).toLocaleString('id-ID')}
+                  ${formatRupiah(invoice.total_amount)}
                 </td>
               </tr>
             </tbody>
@@ -190,15 +191,15 @@ const PaymentTrackingPage = () => {
           <div style="margin-top: 40px; width: 300px; float: right;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
               <span>Total Amount:</span>
-              <strong>IDR ${Math.round(invoice.total_amount).toLocaleString('id-ID')}</strong>
+              <strong>${formatRupiah(invoice.total_amount)}</strong>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: green;">
               <span>Total Paid:</span>
-              <span>- IDR ${Math.round(invoice.totalPaid).toLocaleString('id-ID')}</span>
+              <span>- ${formatRupiah(invoice.totalPaid)}</span>
             </div>
             <div style="display: flex; justify-content: space-between; border-top: 2px solid #000; padding-top: 10px; font-size: 18px;">
               <strong>Balance Due:</strong>
-              <strong style="color: #FBBF24;">IDR ${Math.round(invoice.remainingBalance).toLocaleString('id-ID')}</strong>
+              <strong style="color: #FBBF24;">${formatRupiah(invoice.remainingBalance)}</strong>
             </div>
           </div>
           
@@ -272,15 +273,15 @@ const PaymentTrackingPage = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Total Amount</span>
-                      <span className="font-semibold text-foreground">IDR {Math.round(invoice.total_amount).toLocaleString('id-ID')}</span>
+                      <span className="font-semibold text-foreground">{formatRupiah(invoice.total_amount)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Confirmed Paid</span>
-                      <span className="font-semibold text-green-600">IDR {Math.round(invoice.totalPaid).toLocaleString('id-ID')}</span>
+                      <span className="font-semibold text-green-600">{formatRupiah(invoice.totalPaid)}</span>
                     </div>
                     <div className="flex justify-between text-sm mt-2 pt-2 border-t border-border">
                       <span className="font-medium text-foreground">Balance</span>
-                      <span className="font-bold text-primary text-base">IDR {Math.round(invoice.remainingBalance).toLocaleString('id-ID')}</span>
+                      <span className="font-bold text-primary text-base">{formatRupiah(invoice.remainingBalance)}</span>
                     </div>
                   </div>
 
@@ -290,7 +291,7 @@ const PaymentTrackingPage = () => {
                       {invoice.payments.slice(0, 3).map(p => (
                         <div key={p.id} className="flex justify-between items-center text-xs p-2 bg-muted rounded-md">
                           <div>
-                            <p className="font-medium">IDR {Math.round(p.amount).toLocaleString('id-ID')}</p>
+                            <p className="font-medium">{formatRupiah(p.amount)}</p>
                             <p className="text-muted-foreground">{p.payment_method}</p>
                           </div>
                           {getStatusBadge(p.payment_status)}
@@ -440,7 +441,7 @@ const PaymentTrackingPage = () => {
           <div className="py-6 space-y-4">
             <div className="bg-muted p-4 rounded-xl text-center">
               <p className="text-sm text-muted-foreground mb-1">Total to pay</p>
-              <p className="text-3xl font-bold">IDR {Math.round(Number(formData.amount)).toLocaleString('id-ID')}</p>
+              <p className="text-3xl font-bold">{formatRupiah(Number(formData.amount))}</p>
             </div>
             <p className="text-center text-sm text-muted-foreground">
               In a real environment, the user would enter their credit card details here via Stripe Elements.

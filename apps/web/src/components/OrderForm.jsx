@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { productService } from '@/services/productService.js';
 import { orderService } from '@/services/orderService.js';
 import { invoiceService } from '@/services/invoiceService.js';
+import { formatRupiah } from '@/lib/currency.js';
 
 const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -245,7 +246,7 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
               <SelectContent>
                 {products.map((product) => (
                   <SelectItem key={product.id} value={product.id}>
-                    {product.package_name} - Rp {Math.round(product.base_price).toLocaleString('id-ID')}
+                    {product.package_name} - {formatRupiah(product.base_price)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -254,7 +255,7 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
 
           {selectedProduct && (
             <div className="bg-muted p-3 rounded-lg">
-              <p className="text-sm font-medium">Base Price: Rp {Math.round(selectedProduct.base_price).toLocaleString('id-ID')}</p>
+              <p className="text-sm font-medium">Base Price: {formatRupiah(selectedProduct.base_price)}</p>
             </div>
           )}
 

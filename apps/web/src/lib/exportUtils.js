@@ -1,5 +1,6 @@
 import html2pdf from 'html2pdf.js';
 import { format } from 'date-fns';
+import { formatRupiah } from './currency.js';
 
 export const exportToCSV = (filename, columns, data) => {
   const csvContent = [
@@ -39,8 +40,8 @@ export const exportToPDF = (elementId, filename) => {
 };
 
 const formatCurrency = (amount) => {
-  if (amount === null || amount === undefined) return 'Rp 0';
-  return `Rp ${Math.round(Number(amount) || 0).toLocaleString('id-ID')}`;
+  if (amount === null || amount === undefined) return formatRupiah(0);
+  return formatRupiah(amount);
 };
 
 const formatDate = (dateString) => {

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button.jsx';
 import { Skeleton } from '@/components/ui/skeleton.jsx';
 import { Calendar, MapPin, Package, Clock, User, Banknote, ChevronRight, CalendarX, AlertCircle, RefreshCcw } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatRupiah } from '@/lib/currency.js';
 
 const AssignedEventsModal = ({ isOpen, onOpenChange, events, loading, error, onRetry }) => {
   const navigate = useNavigate();
@@ -66,10 +67,10 @@ const AssignedEventsModal = ({ isOpen, onOpenChange, events, loading, error, onR
 
   const formatCurrency = (amt) => {
     try {
-      if (amt === undefined || amt === null || isNaN(Number(amt))) return 'Rp 0';
-      return `Rp ${Math.round(Number(amt)).toLocaleString('id-ID')}`;
+      if (amt === undefined || amt === null || isNaN(Number(amt))) return formatRupiah(0);
+      return formatRupiah(amt);
     } catch {
-      return 'Rp 0';
+      return formatRupiah(0);
     }
   };
 

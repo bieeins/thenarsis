@@ -8,6 +8,7 @@ import { exportToPDF } from '@/lib/exportUtils';
 import { paymentService } from '@/services/paymentService.js';
 import { expenseService } from '@/services/expenseService.js';
 import { toast } from 'sonner';
+import { formatRupiah } from '@/lib/currency.js';
 
 const ProfitLossPage = () => {
   const [data, setData] = useState(null);
@@ -77,11 +78,11 @@ const ProfitLossPage = () => {
                 <h3 className="text-lg font-bold border-b border-border pb-2 mb-4 text-revenue">Revenue</h3>
                 <div className="flex justify-between items-center py-2 px-4 bg-muted/20 rounded-md mb-2">
                   <span className="font-medium">Total Orders Revenue</span>
-                  <span className="font-numeric font-semibold">Rp {Math.round(data.totalRevenue).toLocaleString('id-ID')}</span>
+                  <span className="font-numeric font-semibold">{formatRupiah(data.totalRevenue)}</span>
                 </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-muted/40 rounded-md border-t-2 border-border mt-4">
                   <span className="font-bold text-lg">Total Revenue</span>
-                  <span className="font-numeric font-bold text-lg text-revenue">Rp {Math.round(data.totalRevenue).toLocaleString('id-ID')}</span>
+                  <span className="font-numeric font-bold text-lg text-revenue">{formatRupiah(data.totalRevenue)}</span>
                 </div>
               </div>
 
@@ -92,7 +93,7 @@ const ProfitLossPage = () => {
                   {Object.entries(data.expenseByCategory).map(([cat, amount]) => (
                     <div key={cat} className="flex justify-between items-center py-2 px-4 hover:bg-muted/20 rounded-md transition-colors">
                       <span className="capitalize">{cat}</span>
-                      <span className="font-numeric">Rp {Math.round(amount).toLocaleString('id-ID')}</span>
+                      <span className="font-numeric">{formatRupiah(amount)}</span>
                     </div>
                   ))}
                   {Object.keys(data.expenseByCategory).length === 0 && (
@@ -101,7 +102,7 @@ const ProfitLossPage = () => {
                 </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-muted/40 rounded-md border-t-2 border-border mt-4">
                   <span className="font-bold text-lg">Total Expenses</span>
-                  <span className="font-numeric font-bold text-lg text-expense">Rp {Math.round(data.totalExpenses).toLocaleString('id-ID')}</span>
+                  <span className="font-numeric font-bold text-lg text-expense">{formatRupiah(data.totalExpenses)}</span>
                 </div>
               </div>
 
@@ -110,7 +111,7 @@ const ProfitLossPage = () => {
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-xl font-bold">Net Profit</span>
                   <span className={`text-2xl font-numeric font-bold ${data.netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
-                    Rp {Math.round(data.netProfit).toLocaleString('id-ID')}
+                    {formatRupiah(data.netProfit)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-sm opacity-80">

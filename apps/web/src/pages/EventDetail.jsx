@@ -11,6 +11,7 @@ import { crewAssignmentService } from '@/services/crewAssignmentService.js';
 import { designWorkService } from '@/services/designWorkService.js';
 import { format } from 'date-fns';
 import { validateAndFormatDesignLink } from '@/lib/validateAndFormatDesignLink.js';
+import { formatRupiah } from '@/lib/currency.js';
 
 const EventDetail = () => {
   const { id } = useParams();
@@ -206,15 +207,15 @@ const EventDetail = () => {
                     </div>
                     <div className="flex justify-between items-center text-sm border-b border-white/10 pb-2">
                       <span>Agreed Fee</span>
-                      <span className="font-semibold font-numeric">Rp {Math.round(assignment.attendance_amount || assignment.fee || 0).toLocaleString('id-ID')}</span>
+                      <span className="font-semibold font-numeric">{formatRupiah(assignment.attendance_amount || assignment.fee || 0)}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm border-b border-white/10 pb-2">
                       <span className="text-green-400">Paid Amount</span>
-                      <span className="font-semibold text-green-400 font-numeric">Rp {Math.round(assignment.paid_amount || 0).toLocaleString('id-ID')}</span>
+                      <span className="font-semibold text-green-400 font-numeric">{formatRupiah(assignment.paid_amount || 0)}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-primary">Pending Amount</span>
-                      <span className="font-bold text-primary font-numeric">Rp {Math.round(assignment.pending_amount || 0).toLocaleString('id-ID')}</span>
+                      <span className="font-bold text-primary font-numeric">{formatRupiah(assignment.pending_amount || 0)}</span>
                     </div>
                   </div>
                   

@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import DesignFeeDetailModal from './DesignFeeDetailModal.jsx';
 import CrewAttendanceDetailModal from './CrewAttendanceDetailModal.jsx';
 import { exportDesignFeesToCSV, exportCrewAttendanceToCSV, exportCombinedReportToCSV } from '@/lib/exportUtils.js';
+import { formatRupiah } from '@/lib/currency.js';
 
 const FeesAndCompensationWidget = () => {
   const [designFees, setDesignFees] = useState([]);
@@ -239,20 +240,20 @@ const FeesAndCompensationWidget = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-card p-4 rounded-xl border shadow-sm">
               <p className="text-xs font-medium text-muted-foreground mb-1">Gross Revenue</p>
-              <p className="text-xl font-bold font-numeric text-foreground">Rp {Math.round(revenueImpact.gross).toLocaleString('id-ID')}</p>
+              <p className="text-xl font-bold font-numeric text-foreground">{formatRupiah(revenueImpact.gross)}</p>
             </div>
             <div className="bg-red-50/50 dark:bg-red-950/20 p-4 rounded-xl border border-red-100 dark:border-red-900/30">
               <p className="text-xs font-medium text-red-800 dark:text-red-400 mb-1">Total Design Fees</p>
-              <p className="text-xl font-bold font-numeric text-red-700 dark:text-red-500">- Rp {Math.round(revenueImpact.fees).toLocaleString('id-ID')}</p>
+              <p className="text-xl font-bold font-numeric text-red-700 dark:text-red-500">- {formatRupiah(revenueImpact.fees)}</p>
             </div>
             <div className="bg-red-50/50 dark:bg-red-950/20 p-4 rounded-xl border border-red-100 dark:border-red-900/30">
               <p className="text-xs font-medium text-red-800 dark:text-red-400 mb-1">Total Crew Amounts</p>
-              <p className="text-xl font-bold font-numeric text-red-700 dark:text-red-500">- Rp {Math.round(revenueImpact.crew).toLocaleString('id-ID')}</p>
+              <p className="text-xl font-bold font-numeric text-red-700 dark:text-red-500">- {formatRupiah(revenueImpact.crew)}</p>
             </div>
             <div className={`${revenueImpact.net >= 0 ? 'bg-green-50/50 dark:bg-green-950/20 border-green-100 dark:border-green-900/30' : 'bg-red-50/50 dark:bg-red-950/20 border-red-100 dark:border-red-900/30'} p-4 rounded-xl border shadow-sm`}>
               <p className={`text-xs font-medium mb-1 ${revenueImpact.net >= 0 ? 'text-green-800 dark:text-green-400' : 'text-red-800 dark:text-red-400'}`}>Net Revenue</p>
               <p className={`text-xl font-bold font-numeric ${revenueImpact.net >= 0 ? 'text-green-700 dark:text-green-500' : 'text-red-700 dark:text-red-500'}`}>
-                Rp {Math.round(revenueImpact.net).toLocaleString('id-ID')}
+                {formatRupiah(revenueImpact.net)}
               </p>
             </div>
           </div>
@@ -352,15 +353,15 @@ const FeesAndCompensationWidget = () => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-card p-4 rounded-xl border shadow-sm">
                   <p className="text-xs font-medium text-muted-foreground mb-1">Filtered Total</p>
-                  <p className="text-lg font-bold font-numeric">Rp {Math.round(feeStats.total).toLocaleString('id-ID')}</p>
+                  <p className="text-lg font-bold font-numeric">{formatRupiah(feeStats.total)}</p>
                 </div>
                 <div className="bg-card p-4 rounded-xl border shadow-sm">
                   <p className="text-xs font-medium text-muted-foreground mb-1">This Month</p>
-                  <p className="text-lg font-bold font-numeric">Rp {Math.round(feeStats.month).toLocaleString('id-ID')}</p>
+                  <p className="text-lg font-bold font-numeric">{formatRupiah(feeStats.month)}</p>
                 </div>
                 <div className="bg-card p-4 rounded-xl border shadow-sm">
                   <p className="text-xs font-medium text-muted-foreground mb-1">Avg Fee</p>
-                  <p className="text-lg font-bold font-numeric">Rp {Math.round(feeStats.avg).toLocaleString('id-ID')}</p>
+                  <p className="text-lg font-bold font-numeric">{formatRupiah(feeStats.avg)}</p>
                 </div>
                 <div className="bg-card p-4 rounded-xl border shadow-sm flex flex-col justify-center">
                   <div className="flex justify-between text-xs mb-1">
@@ -400,7 +401,7 @@ const FeesAndCompensationWidget = () => {
                           <tr key={fee.id} onClick={() => setSelectedFee(fee)} className="border-b last:border-0 hover:bg-muted/30 cursor-pointer transition-colors">
                             <td className="px-4 py-3 font-medium">{fee.designer_name}</td>
                             <td className="px-4 py-3 text-muted-foreground truncate max-w-[200px]">{fee.order?.event_name || 'N/A'}</td>
-                            <td className="px-4 py-3 text-right font-numeric font-medium">Rp {fee.fee_amount ? Math.round(fee.fee_amount).toLocaleString('id-ID') : 0}</td>
+                            <td className="px-4 py-3 text-right font-numeric font-medium">{formatRupiah(fee.fee_amount || 0)}</td>
                             <td className="px-4 py-3 text-muted-foreground">{format(new Date(fee.created_at), 'MMM dd, yyyy')}</td>
                             <td className="px-4 py-3 text-center">{getFeeBadge(fee.status)}</td>
                           </tr>
@@ -419,7 +420,7 @@ const FeesAndCompensationWidget = () => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-card p-4 rounded-xl border shadow-sm">
                   <p className="text-xs font-medium text-muted-foreground mb-1">Filtered Amounts</p>
-                  <p className="text-lg font-bold font-numeric">Rp {Math.round(crewStats.totalAmt).toLocaleString('id-ID')}</p>
+                  <p className="text-lg font-bold font-numeric">{formatRupiah(crewStats.totalAmt)}</p>
                 </div>
                 <div className="bg-green-50/50 dark:bg-green-950/20 p-4 rounded-xl border border-green-100 dark:border-green-900/30">
                   <p className="text-xs font-medium text-green-800 dark:text-green-400 mb-1">Hadir</p>
@@ -463,7 +464,7 @@ const FeesAndCompensationWidget = () => {
                             <td className="px-4 py-3 text-muted-foreground">{assignment.order?.event_date ? format(new Date(assignment.order?.event_date), 'MMM dd, yyyy') : '-'}</td>
                             <td className="px-4 py-3 text-center">{getAttendanceBadge(assignment.attendance_status || 'belum_jawab')}</td>
                             <td className="px-4 py-3 text-right font-numeric font-medium">
-                              {assignment.attendance_amount ? `Rp ${Math.round(assignment.attendance_amount).toLocaleString('id-ID')}` : '-'}
+                              {assignment.attendance_amount ? formatRupiah(assignment.attendance_amount) : '-'}
                             </td>
                           </tr>
                         ))

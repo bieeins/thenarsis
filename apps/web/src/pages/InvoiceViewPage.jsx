@@ -8,7 +8,7 @@ import { Share2, Download, Mail, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { invoiceService } from '@/services/invoiceService.js';
-import { orderService } from '@/services/orderService.js';
+import { formatRupiah } from '@/lib/currency.js';
 
 const InvoiceViewPage = () => {
   const { invoiceNumber } = useParams();
@@ -41,18 +41,7 @@ const InvoiceViewPage = () => {
         (a, b) => new Date(b.payment_date) - new Date(a.payment_date)
       );
       setPayments(sortedPayments);
-
-      // Order details require authentication, so this only resolves for a
-      // signed-in viewer (e.g. staff previewing the link); public customers
-      // will simply see the invoice/payment summary without event details.
-      if (invoiceData.order_id) {
-        try {
-          const orderRes = await orderService.get(invoiceData.order_id);
-          setOrder(orderRes.data);
-        } catch (orderErr) {
-          setOrder(null);
-        }
-      }
+      setOrder(invoiceData.order || null);
     } catch (err) {
       setError(true);
       toast.error('Failed to load invoice');
@@ -206,7 +195,7 @@ const InvoiceViewPage = () => {
                         <p className="text-sm text-muted-foreground line-clamp-2 max-w-md">{displayOrder.product?.description?.replace(/<[^>]*>?/gm, '') || ''}</p>
                       </td>
                       <td className="py-4 text-right font-numeric font-semibold text-lg">
-                        IDR {Math.round(invoice.total_amount || 0).toLocaleString('id-ID')}
+                        {formatRupiah(invoice.total_amount || 0)}
                       </td>
                     </tr>
                   </tbody>
@@ -217,15 +206,15 @@ const InvoiceViewPage = () => {
                 <div className="w-full sm:w-1/2 md:w-1/3 space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span className="font-numeric font-medium">IDR {Math.round(invoice.total_amount || 0).toLocaleString('id-ID')}</span>
+                    <span className="font-numeric font-medium">{formatRupiah(invoice.total_amount || 0)}</span>
                   </div>
                   <div className="flex justify-between text-sm text-green-600 pb-3 border-b border-border">
                     <span>Payments Received</span>
-                    <span className="font-numeric font-medium">- IDR {Math.round(totalPaid).toLocaleString('id-ID')}</span>
+                    <span className="font-numeric font-medium">- {formatRupiah(totalPaid)}</span>
                   </div>
                   <div className="flex justify-between text-lg pt-1">
                     <span className="font-bold">Balance Due</span>
-                    <span className="font-numeric font-bold text-primary">IDR {Math.round(remainingBalance).toLocaleString('id-ID')}</span>
+                    <span className="font-numeric font-bold text-primary">{formatRupiah(remainingBalance)}</span>
                   </div>
                 </div>
               </div>
@@ -237,7 +226,7 @@ const InvoiceViewPage = () => {
                     {payments.map((payment) => (
                       <div key={payment.id} className="flex justify-between items-center p-4 bg-muted/30 border rounded-lg">
                         <div>
-                          <p className="font-semibold font-numeric">IDR {Math.round(payment.amount || 0).toLocaleString('id-ID')}</p>
+                          <p className="font-semibold font-numeric">{formatRupiah(payment.amount || 0)}</p>
                           <p className="text-sm text-muted-foreground">
                             {payment.payment_date ? format(new Date(payment.payment_date), 'MMM dd, yyyy') : 'Unknown Date'} • {payment.payment_method || 'Unknown Method'}
                           </p>
