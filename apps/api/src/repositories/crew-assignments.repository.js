@@ -15,7 +15,12 @@ async function expandRows(rows) {
     orderIds.length ? db('orders').whereIn('id', orderIds) : [],
     userIds.length ? db('users').select('id', 'name', 'email', 'role').whereIn('id', userIds) : [],
   ]);
-  const orderMap = new Map(orders.map((o) => [o.id, o]));
+
+  const productIds = [...new Set(orders.map((o) => o.product_id).filter(Boolean))];
+  const products = productIds.length ? await db('products').whereIn('id', productIds) : [];
+  const productMap = new Map(products.map((p) => [p.id, p]));
+  const orderMap = new Map(orders.map((o) => [o.id, { ...o, product: productMap.get(o.product_id) || null }]));
+
   const userMap = new Map(users.map((u) => [u.id, u]));
 
   return rows.map((row) => ({

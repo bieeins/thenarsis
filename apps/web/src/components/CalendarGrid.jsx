@@ -84,6 +84,9 @@ const CalendarGrid = ({ currentDate, eventsByDate, onEventClick, timezone }) => 
                       title={`${event.event_name} - ${event.customer_name}`}
                     >
                       <div className="font-semibold truncate">{event.event_name || 'Unnamed'}</div>
+                      {event.product?.package_name && (
+                        <div className="truncate opacity-70 text-[10px]">{event.product.package_name}</div>
+                      )}
                       <div className="flex items-center gap-1 mt-0.5 opacity-80 text-[10px]">
                         <Clock className="w-3 h-3 shrink-0" />
                         <span>{formatTimeWithZone(event.event_date)}</span>

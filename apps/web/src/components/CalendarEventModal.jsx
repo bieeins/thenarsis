@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Separator } from '@/components/ui/separator.jsx';
-import { Calendar, MapPin, User, Clock, Link as LinkIcon, ExternalLink, Copy, CheckCircle2, AlertCircle, Users } from 'lucide-react';
+import { Calendar, MapPin, User, Clock, Link as LinkIcon, ExternalLink, Copy, CheckCircle2, AlertCircle, Users, Package } from 'lucide-react';
 import { validateAndFormatDesignLink } from '@/lib/validateAndFormatDesignLink.js';
 import { toast } from 'sonner';
 
@@ -61,6 +61,12 @@ const CalendarEventModal = ({ isOpen, onClose, event }) => {
               <MapPin className="w-4 h-4 text-primary" />
               <span>Location: <span className="font-medium text-foreground">{event.event_location || 'TBD'}</span></span>
             </div>
+            {event.product?.package_name && (
+              <div className="flex items-center gap-3 text-muted-foreground">
+                <Package className="w-4 h-4 text-primary" />
+                <span>Package: <span className="font-medium text-foreground">{event.product.package_name}</span></span>
+              </div>
+            )}
             <div className="flex items-center gap-3 text-muted-foreground">
               <Clock className="w-4 h-4 text-primary" />
               <span>Designer: <span className="font-medium text-foreground">{event.designer_name || 'Unassigned'}</span></span>
