@@ -34,12 +34,21 @@ if (!isProduction && (!process.env.JWT_ACCESS_SECRET || !process.env.JWT_REFRESH
   console.warn('JWT_ACCESS_SECRET/JWT_REFRESH_SECRET not set — using insecure development defaults. Set them before deploying.');
 }
 
+// FRONTEND_URL may list several comma-separated origins (useful in dev to allow
+// both http://localhost:5173 and a LAN IP like http://10.20.0.3:5173 at once).
+// The first one stays the single canonical URL used for things like email links.
+const frontendOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 export const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
   isProduction,
   port: Number(process.env.PORT || 3000),
   appUrl: process.env.APP_URL || 'http://localhost:3000',
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  frontendUrl: frontendOrigins[0],
+  corsOrigins: frontendOrigins,
 
   db: {
     host: process.env.DB_HOST || 'localhost',

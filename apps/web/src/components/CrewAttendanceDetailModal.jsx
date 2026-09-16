@@ -15,6 +15,7 @@ const CrewAttendanceDetailModal = ({ isOpen, onClose, assignmentRecord, onSave }
   const [status, setStatus] = useState('');
   const [reason, setReason] = useState('');
   const [amount, setAmount] = useState('');
+  const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -23,6 +24,7 @@ const CrewAttendanceDetailModal = ({ isOpen, onClose, assignmentRecord, onSave }
       setStatus(assignmentRecord.attendance_status || 'belum_jawab');
       setReason(assignmentRecord.attendance_reason || '');
       setAmount(assignmentRecord.attendance_amount?.toString() || '');
+      setNotes(assignmentRecord.crew_notes || '');
       setShowConfirm(false);
     }
   }, [assignmentRecord, isOpen]);
@@ -30,7 +32,8 @@ const CrewAttendanceDetailModal = ({ isOpen, onClose, assignmentRecord, onSave }
   const hasChanges = assignmentRecord && (
     status !== (assignmentRecord.attendance_status || 'belum_jawab') ||
     reason !== (assignmentRecord.attendance_reason || '') ||
-    amount !== (assignmentRecord.attendance_amount?.toString() || '')
+    amount !== (assignmentRecord.attendance_amount?.toString() || '') ||
+    notes !== (assignmentRecord.crew_notes || '')
   );
 
   const handleSaveClick = () => {
@@ -59,6 +62,8 @@ const CrewAttendanceDetailModal = ({ isOpen, onClose, assignmentRecord, onSave }
       } else {
         updateData.attendance_amount = null;
       }
+
+      updateData.crew_notes = notes.trim() || null;
 
       const res = await crewAssignmentService.update(assignmentRecord.id, updateData);
 
@@ -153,6 +158,19 @@ const CrewAttendanceDetailModal = ({ isOpen, onClose, assignmentRecord, onSave }
                 />
               </div>
             </div>
+
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label htmlFor="notes" className="text-right mt-2">Keterangan</Label>
+              <div className="col-span-3">
+                <Textarea
+                  id="notes"
+                  value={notes || ''}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Optional notes..."
+                  className="resize-none h-20"
+                />
+              </div>
+            </div>
           </div>
         ) : (
           <div className="py-6 space-y-4">
@@ -184,6 +202,12 @@ const CrewAttendanceDetailModal = ({ isOpen, onClose, assignmentRecord, onSave }
                     <span className="line-through opacity-50 mr-2">{formatRupiah(assignmentRecord.attendance_amount || 0)}</span>
                     <span className="font-bold text-foreground">{formatRupiah(amount || 0)}</span>
                   </span>
+                </div>
+              )}
+              {notes !== (assignmentRecord.crew_notes || '') && (
+                <div className="flex flex-col mt-2 pt-2 border-t">
+                  <span className="text-muted-foreground mb-1">Keterangan:</span>
+                  <span className="italic text-foreground">{notes ? `"${notes}"` : '(cleared)'}</span>
                 </div>
               )}
             </div>

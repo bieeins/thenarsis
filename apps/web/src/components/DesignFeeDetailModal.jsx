@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -13,6 +14,7 @@ import { formatRupiah } from '@/lib/currency.js';
 const DesignFeeDetailModal = ({ isOpen, onClose, feeRecord, onSave }) => {
   const [amount, setAmount] = useState('');
   const [status, setStatus] = useState('');
+  const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -20,13 +22,15 @@ const DesignFeeDetailModal = ({ isOpen, onClose, feeRecord, onSave }) => {
     if (feeRecord && isOpen) {
       setAmount(feeRecord.fee_amount?.toString() || '0');
       setStatus(feeRecord.status || 'pending');
+      setNotes(feeRecord.notes || '');
       setShowConfirm(false);
     }
   }, [feeRecord, isOpen]);
 
   const hasChanges = feeRecord && (
     amount !== (feeRecord.fee_amount?.toString() || '0') ||
-    status !== (feeRecord.status || 'pending')
+    status !== (feeRecord.status || 'pending') ||
+    notes !== (feeRecord.notes || '')
   );
 
   const handleSaveClick = () => {
@@ -42,7 +46,8 @@ const DesignFeeDetailModal = ({ isOpen, onClose, feeRecord, onSave }) => {
     try {
       const res = await designIncomeService.update(feeRecord.id, {
         fee_amount: Number(amount),
-        status: status
+        status: status,
+        notes: notes.trim() || null
       });
 
       toast.success('Design fee updated successfully');
@@ -118,6 +123,19 @@ const DesignFeeDetailModal = ({ isOpen, onClose, feeRecord, onSave }) => {
                 </Select>
               </div>
             </div>
+
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label htmlFor="notes" className="text-right mt-2">Keterangan</Label>
+              <div className="col-span-3">
+                <Textarea
+                  id="notes"
+                  value={notes || ''}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Optional notes..."
+                  className="resize-none h-20"
+                />
+              </div>
+            </div>
           </div>
         ) : (
           <div className="py-6 space-y-4">
@@ -143,6 +161,12 @@ const DesignFeeDetailModal = ({ isOpen, onClose, feeRecord, onSave }) => {
                     <span className="line-through opacity-50 mr-2 capitalize">{feeRecord.status || 'pending'}</span>
                     <span className="font-bold text-foreground capitalize">{status}</span>
                   </span>
+                </div>
+              )}
+              {notes !== (feeRecord.notes || '') && (
+                <div className="flex flex-col mt-2 pt-2 border-t">
+                  <span className="text-muted-foreground mb-1">Keterangan:</span>
+                  <span className="italic text-foreground">{notes ? `"${notes}"` : '(cleared)'}</span>
                 </div>
               )}
             </div>

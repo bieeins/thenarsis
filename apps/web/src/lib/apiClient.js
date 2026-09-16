@@ -1,4 +1,8 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// Falls back to whatever host the page itself was loaded from (same port 3000)
+// instead of a hardcoded "localhost" — so opening the dev server from a LAN
+// IP (e.g. http://10.20.0.3:5173) still reaches the API on that same machine
+// instead of trying to hit "localhost" on the viewer's own device.
+const API_URL = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:3000`;
 
 let accessToken = null;
 let refreshPromise = null;
