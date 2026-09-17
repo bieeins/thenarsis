@@ -25,6 +25,7 @@ import { designWorkService } from '@/services/designWorkService.js';
 import { productService } from '@/services/productService.js';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { formatRupiah } from '@/lib/currency.js';
 
 const DesignWorkList = () => {
   const { currentUser } = useAuth();
@@ -186,6 +187,7 @@ const DesignWorkList = () => {
                         <TableHead className="font-semibold">Package</TableHead>
                         <TableHead className="font-semibold">Order Status</TableHead>
                         <TableHead className="font-semibold">Design Status</TableHead>
+                        <TableHead className="text-right font-semibold">Fee</TableHead>
                         <TableHead className="text-right pr-6 font-semibold">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -212,6 +214,9 @@ const DesignWorkList = () => {
                             </TableCell>
                             <TableCell>
                               {getStatusBadge(work.status)}
+                            </TableCell>
+                            <TableCell className="text-right font-numeric font-medium whitespace-nowrap">
+                              {work.design_fee ? formatRupiah(work.design_fee) : '-'}
                             </TableCell>
                             <TableCell className="text-right pr-6">
                               <Button variant="ghost" size="sm" asChild className="hover:bg-primary/10 hover:text-primary transition-colors">
