@@ -4,11 +4,12 @@ import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Share2, Download, Mail, Loader2, AlertCircle } from 'lucide-react';
+import { Download, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { invoiceService } from '@/services/invoiceService.js';
 import { formatRupiah } from '@/lib/currency.js';
+import { printInvoice } from '@/lib/exportUtils.js';
 
 const InvoiceViewPage = () => {
   const { invoiceNumber } = useParams();
@@ -50,22 +51,16 @@ const InvoiceViewPage = () => {
     }
   };
 
-  const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+  const totalPaid = payments.reduce((sum, p) => p.payment_status === 'Confirmed' ? sum + (p.amount || 0) : sum, 0);
   const remainingBalance = invoice ? (invoice.total_amount || 0) - totalPaid : 0;
 
-  const handleShare = (platform) => {
-    const url = window.location.href;
-    const text = `Invoice ${invoiceNumber || ''} - Thenarsis Management System`;
-
-    if (platform === 'whatsapp') {
-      window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
-    } else if (platform === 'email') {
-      window.location.href = `mailto:?subject=${encodeURIComponent(text)}&body=${encodeURIComponent(url)}`;
-    }
-  };
-
   const handleDownload = () => {
-    window.print();
+    printInvoice({
+      ...invoice,
+      order,
+      totalPaid,
+      remainingBalance,
+    });
   };
 
   if (loading) {
@@ -117,14 +112,6 @@ const InvoiceViewPage = () => {
       <div className="min-h-screen bg-secondary/5 py-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-end gap-2 mb-6 print:hidden">
-            <Button variant="outline" size="sm" onClick={() => handleShare('whatsapp')}>
-              <Share2 className="w-4 h-4 mr-2" />
-              WhatsApp
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => handleShare('email')}>
-              <Mail className="w-4 h-4 mr-2" />
-              Email
-            </Button>
             <Button variant="outline" size="sm" onClick={handleDownload}>
               <Download className="w-4 h-4 mr-2" />
               Download / Print
@@ -231,8 +218,12 @@ const InvoiceViewPage = () => {
                             {payment.payment_date ? format(new Date(payment.payment_date), 'MMM dd, yyyy') : 'Unknown Date'} • {payment.payment_method || 'Unknown Method'}
                           </p>
                         </div>
-                        <div className="text-green-600 bg-green-100 px-3 py-1 rounded-full text-xs font-semibold">
-                          Confirmed
+                        <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          payment.payment_status === 'Confirmed' ? 'text-green-600 bg-green-100' :
+                          payment.payment_status === 'Failed' ? 'text-red-600 bg-red-100' :
+                          'text-yellow-700 bg-yellow-100'
+                        }`}>
+                          {payment.payment_status || 'Pending'}
                         </div>
                       </div>
                     ))}

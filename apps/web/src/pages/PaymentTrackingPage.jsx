@@ -20,12 +20,12 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
 import { CreditCard, Download, FileText, Send, Share2, CheckCircle2, Search, X } from 'lucide-react';
 import { invoiceService } from '@/services/invoiceService.js';
 import { paymentService } from '@/services/paymentService.js';
 import { orderService } from '@/services/orderService.js';
 import { formatRupiah } from '@/lib/currency.js';
+import { exportInvoiceToPDF } from '@/lib/exportUtils.js';
 
 const PaymentTrackingPage = () => {
   const [invoices, setInvoices] = useState([]);
@@ -139,86 +139,7 @@ const PaymentTrackingPage = () => {
   const generatePDF = async (invoice) => {
     try {
       toast.info('Generating PDF Invoice...');
-      const html2pdf = (await import('html2pdf.js')).default;
-      
-      const element = document.createElement('div');
-      element.innerHTML = `
-        <div style="padding: 40px; font-family: sans-serif; color: #000;">
-          <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #FBBF24; padding-bottom: 20px; mb-6">
-            <div>
-               <h1 style="font-size: 32px; color: #000; margin: 0;">THENARSIS</h1>
-               <p style="color: #666; margin: 5px 0;">Professional Event Services</p>
-            </div>
-            <div style="text-align: right;">
-               <h2 style="font-size: 24px; margin: 0; color: #FBBF24;">INVOICE</h2>
-               <p>#${invoice.invoice_number}</p>
-               <p>${format(new Date(invoice.created_at), 'MMM dd, yyyy')}</p>
-            </div>
-          </div>
-          
-          <div style="display: flex; justify-content: space-between; margin-top: 40px;">
-            <div>
-              <h3 style="margin-bottom: 10px; color: #333;">Billed To:</h3>
-              <p style="font-weight: bold; margin: 0;">${invoice.order?.customer_name}</p>
-              <p style="margin: 5px 0;">${invoice.order?.phone_number}</p>
-            </div>
-            <div style="text-align: right;">
-              <h3 style="margin-bottom: 10px; color: #333;">Event Details:</h3>
-              <p style="margin: 0;">${invoice.order?.event_name}</p>
-              <p style="margin: 5px 0;">${format(new Date(invoice.order?.event_date), 'MMM dd, yyyy')}</p>
-              <p style="margin: 0;">${invoice.order?.event_location}</p>
-            </div>
-          </div>
-
-          <table style="width: 100%; margin-top: 40px; border-collapse: collapse;">
-            <thead>
-              <tr style="background: #FBBF24; color: #000;">
-                <th style="padding: 12px; text-align: left;">Description</th>
-                <th style="padding: 12px; text-align: right;">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style="padding: 12px; border-bottom: 1px solid #eee;">
-                  <strong>${invoice.order?.product?.package_name || 'Event Package'}</strong>
-                </td>
-                <td style="padding: 12px; text-align: right; border-bottom: 1px solid #eee;">
-                  ${formatRupiah(invoice.total_amount)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div style="margin-top: 40px; width: 300px; float: right;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-              <span>Total Amount:</span>
-              <strong>${formatRupiah(invoice.total_amount)}</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: green;">
-              <span>Total Paid:</span>
-              <span>- ${formatRupiah(invoice.totalPaid)}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; border-top: 2px solid #000; padding-top: 10px; font-size: 18px;">
-              <strong>Balance Due:</strong>
-              <strong style="color: #FBBF24;">${formatRupiah(invoice.remainingBalance)}</strong>
-            </div>
-          </div>
-          
-          <div style="clear: both; margin-top: 60px; text-align: center; color: #666; font-size: 12px;">
-             Thank you for trusting Thenarsis Management System.
-          </div>
-        </div>
-      `;
-
-      const opt = {
-        margin: 10,
-        filename: `${invoice.invoice_number}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-
-      html2pdf().from(element).set(opt).save();
+      await exportInvoiceToPDF(invoice);
     } catch (e) {
       toast.error('Failed to generate PDF');
     }

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DollarSign, TrendingUp, Users, Wallet, Activity, LayoutDashboard, CalendarDays } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import FeesAndCompensationWidget from '@/components/FeesAndCompensationWidget.jsx';
 import { orderService } from '@/services/orderService.js';
 import { invoiceService } from '@/services/invoiceService.js';
@@ -258,6 +258,7 @@ const OwnerDashboard = () => {
                           ))}
                         </Pie>
                         <Tooltip formatter={(value) => formatRupiah(value)} />
+                        <Legend verticalAlign="bottom" height={36} iconType="circle" />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
