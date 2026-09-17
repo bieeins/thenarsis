@@ -21,7 +21,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { CreditCard, Download, FileText, Send, Share2, CheckCircle2 } from 'lucide-react';
+import { CreditCard, Download, FileText, Send, Share2, CheckCircle2, Search, X } from 'lucide-react';
 import { invoiceService } from '@/services/invoiceService.js';
 import { paymentService } from '@/services/paymentService.js';
 import { orderService } from '@/services/orderService.js';
@@ -30,6 +30,7 @@ import { formatRupiah } from '@/lib/currency.js';
 const PaymentTrackingPage = () => {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [stripeMockOpen, setStripeMockOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -232,6 +233,16 @@ const PaymentTrackingPage = () => {
     }
   };
 
+  const filteredInvoices = invoices.filter((invoice) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      invoice.invoice_number?.toLowerCase().includes(q) ||
+      invoice.order?.customer_name?.toLowerCase().includes(q) ||
+      invoice.order?.event_name?.toLowerCase().includes(q)
+    );
+  });
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -253,8 +264,29 @@ const PaymentTrackingPage = () => {
             <p className="text-muted-foreground mt-1">Manage digital payments and generate invoices</p>
           </div>
 
+          {invoices.length > 0 && (
+            <div className="relative mb-6 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by invoice number, customer, or event..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-9 bg-white"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {invoices.map((invoice) => (
+            {filteredInvoices.map((invoice) => (
               <Card key={invoice.id} className="shadow-md border-0 overflow-hidden flex flex-col">
                 <CardHeader className="bg-secondary text-secondary-foreground pb-4">
                   <div className="flex justify-between items-start">
@@ -330,6 +362,14 @@ const PaymentTrackingPage = () => {
               <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-xl font-medium">No invoices found</p>
               <p className="text-muted-foreground mt-2">Create an order to generate your first invoice.</p>
+            </div>
+          )}
+
+          {invoices.length > 0 && filteredInvoices.length === 0 && (
+            <div className="text-center py-20 bg-white rounded-2xl shadow-sm border border-border">
+              <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-xl font-medium">No invoices match "{searchQuery}"</p>
+              <p className="text-muted-foreground mt-2">Try a different invoice number, customer, or event name.</p>
             </div>
           )}
         </div>
