@@ -1,12 +1,19 @@
 import { z } from 'zod';
 
+// The frontend clears an unset link to '' rather than null/omitting it —
+// treat an empty string the same as "no link" instead of failing .url().
+const optionalDesignFileLink = z.preprocess(
+  (val) => (val === '' ? null : val),
+  z.string().url().optional().nullable(),
+);
+
 export const createDesignWorkSchema = z.object({
   order_id: z.string().min(1),
   designer_id: z.string().min(1),
   design_notes: z.string().optional().nullable(),
   status: z.enum(['pending', 'in_progress', 'revision', 'completed']).default('pending'),
   design_fee: z.coerce.number().min(0).optional().nullable(),
-  design_file_link: z.string().url().optional().nullable(),
+  design_file_link: optionalDesignFileLink,
   assigned_by: z.string().optional().nullable(),
   fee_submitted_date: z.string().optional().nullable(),
 });

@@ -89,4 +89,24 @@ describe('design_work assignment + completion', () => {
       .send({ status: 'in_progress' });
     expect(okUpdate.status).toBe(200);
   });
+
+  it('lets a designer change status while leaving design_file_link as an empty string (no link set yet)', async () => {
+    const createRes = await request(app)
+      .post('/api/design-work')
+      .set(authHeader(ownerToken))
+      .send({ order_id: orderId, designer_id: designer.id, status: 'in_progress' });
+    const designWorkId = createRes.body.data.id;
+
+    // This is exactly what the "Design Workspace" form sends when the
+    // Design Reference Link field is left empty — it must not be treated
+    // as an invalid URL.
+    const res = await request(app)
+      .patch(`/api/design-work/${designWorkId}`)
+      .set(authHeader(designerToken))
+      .send({ status: 'revision', design_notes: 'Editing highlight reel from raw footage.', design_file_link: '' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('revision');
+    expect(res.body.data.design_file_link).toBeNull();
+  });
 });

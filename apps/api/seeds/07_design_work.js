@@ -1,5 +1,5 @@
 export async function seed(knex) {
-  await knex('design_work').insert([
+  const designWorkRows = [
     // Wedding album — finished and fee submitted.
     {
       id: 'dw0wedding00010000000001',
@@ -24,5 +24,15 @@ export async function seed(knex) {
       assigned_date: knex.fn.now(),
       assigned_by: '5w5atoldkwg9n4j',
     },
-  ]);
+  ];
+
+  await knex('design_work').insert(designWorkRows);
+
+  // Keep orders.assigned_designer_id in sync with the design_work rows
+  // above — this is what the real "Assign Designer" flow always does
+  // atomically (see ordersService.assignDesigner), so seed data should
+  // reflect the same invariant instead of only setting one side of it.
+  for (const row of designWorkRows) {
+    await knex('orders').where({ id: row.order_id }).update({ assigned_designer_id: row.designer_id });
+  }
 }
