@@ -39,4 +39,16 @@ export const ordersController = {
       ok(res, await ordersService.listItems(req.params.id, req.user));
     } catch (err) { next(err); }
   },
+
+  async assignDesigner(req, res, next) {
+    try {
+      ok(res, await ordersService.assignDesigner(req.params.id, req.body.designer_id, req.user));
+    } catch (err) { next(err); }
+  },
+
+  async assignCrew(req, res, next) {
+    try {
+      ok(res, await ordersService.assignCrew(req.params.id, req.body.crew_ids, req.user));
+    } catch (err) { next(err); }
+  },
 };

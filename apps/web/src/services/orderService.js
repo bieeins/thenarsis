@@ -23,4 +23,10 @@ export const orderService = {
   async remove(id) {
     return apiClient.delete(`/api/orders/${id}`);
   },
+  async assignDesigner(orderId, designerId) {
+    return apiClient.put(`/api/orders/${orderId}/designer`, { designer_id: designerId });
+  },
+  async assignCrew(orderId, crewIds) {
+    return apiClient.put(`/api/orders/${orderId}/crew`, { crew_ids: crewIds });
+  },
 };

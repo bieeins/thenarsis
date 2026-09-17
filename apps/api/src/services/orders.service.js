@@ -2,8 +2,10 @@ import { db } from '../config/database.js';
 import { ordersRepository } from '../repositories/orders.repository.js';
 import { orderItemsRepository } from '../repositories/order-items.repository.js';
 import { parsePagination, parseSort } from '../utils/pagination.js';
-import { forbidden, notFound } from '../utils/http-error.js';
+import { badRequest, forbidden, notFound } from '../utils/http-error.js';
 import { newId } from '../utils/id.js';
+import { notificationService } from './notification.service.js';
+import { logger } from '../utils/logger.js';
 
 const SORTABLE_FIELDS = ['created_at', 'event_date', 'customer_name', 'status'];
 
@@ -90,5 +92,87 @@ export const ordersService = {
   async listItems(orderId, requester) {
     const order = await this.get(orderId, requester);
     return orderItemsRepository.listByOrderId(order.id);
+  },
+
+  // Assigning a designer touches both `orders.assigned_designer_id` and the
+  // `design_work` record in one transaction, so the owner's order list and
+  // the designer's own project list can never disagree about who is on an
+  // order — one always used to lag behind the other since the frontend
+  // previously made these as two separate, non-atomic API calls.
+  async assignDesigner(orderId, designerId, requester) {
+    if (requester.role !== 'owner') throw forbidden();
+    const existingOrder = await ordersRepository.findById(orderId);
+    if (!existingOrder) throw notFound('Order not found');
+
+    const designer = await db('users').where({ id: designerId, role: 'designer' }).first();
+    if (!designer) throw badRequest('designer_id does not reference an existing designer');
+
+    const designWork = await db.transaction(async (trx) => {
+      await trx('orders').where({ id: orderId }).update({ assigned_designer_id: designerId, updated_at: trx.fn.now() });
+
+      const existingWork = await trx('design_work').where({ order_id: orderId }).first();
+      if (existingWork) {
+        await trx('design_work').where({ id: existingWork.id }).update({ designer_id: designerId, updated_at: trx.fn.now() });
+        return trx('design_work').where({ id: existingWork.id }).first();
+      }
+
+      const id = newId();
+      await trx('design_work').insert({ id, order_id: orderId, designer_id: designerId, status: 'pending', assigned_date: trx.fn.now() });
+      return trx('design_work').where({ id }).first();
+    });
+
+    notificationService.notifyDesignerAssignment(designWork).catch((err) => {
+      logger.error({ err, orderId, designWorkId: designWork.id }, 'notify_designer_assignment_failed');
+    });
+
+    return ordersRepository.findByIdExpanded(orderId);
+  },
+
+  // Syncs an order's crew list (add/remove) in one transaction, so a crew
+  // member never ends up with an assignment the owner's order view doesn't
+  // know about, or vice versa.
+  async assignCrew(orderId, crewIds, requester) {
+    if (requester.role !== 'owner') throw forbidden();
+    const existingOrder = await ordersRepository.findById(orderId);
+    if (!existingOrder) throw notFound('Order not found');
+
+    const uniqueCrewIds = [...new Set(crewIds)];
+    if (uniqueCrewIds.length > 0) {
+      const validCrew = await db('users').whereIn('id', uniqueCrewIds).andWhere({ role: 'crew' });
+      if (validCrew.length !== uniqueCrewIds.length) {
+        throw badRequest('crew_ids contains an id that is not a valid crew member');
+      }
+    }
+
+    const { addedRows, allAssignments } = await db.transaction(async (trx) => {
+      const existingAssignments = await trx('crew_assignments').where({ order_id: orderId });
+      const existingIds = existingAssignments.map((a) => a.crew_id);
+
+      const toRemove = existingAssignments.filter((a) => !uniqueCrewIds.includes(a.crew_id));
+      const toAdd = uniqueCrewIds.filter((id) => !existingIds.includes(id));
+
+      if (toRemove.length > 0) {
+        await trx('crew_assignments').whereIn('id', toRemove.map((a) => a.id)).delete();
+      }
+
+      const added = [];
+      for (const crewId of toAdd) {
+        const id = newId();
+        await trx('crew_assignments').insert({
+          id, order_id: orderId, crew_id: crewId, status: 'pending', assigned_date: trx.fn.now(),
+        });
+        added.push(await trx('crew_assignments').where({ id }).first());
+      }
+
+      return { addedRows: added, allAssignments: await trx('crew_assignments').where({ order_id: orderId }) };
+    });
+
+    addedRows.forEach((row) => {
+      notificationService.notifyCrewAssignment(row).catch((err) => {
+        logger.error({ err, crewAssignmentId: row.id }, 'notify_crew_assignment_failed');
+      });
+    });
+
+    return allAssignments;
   },
 };

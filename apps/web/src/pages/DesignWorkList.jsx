@@ -98,10 +98,28 @@ const DesignWorkList = () => {
       'completed': { label: 'Completed', classes: 'bg-green-100 text-green-800' }
     };
     const mapped = statusMap[status] || statusMap['pending'];
-    
+
     return (
       <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${mapped.classes}`}>
         {mapped.label}
+      </span>
+    );
+  };
+
+  // The order itself (Pending/Confirmed/In Progress/Completed/Cancelled) has
+  // a separate lifecycle from this designer's own design work status — shown
+  // side by side so it's never ambiguous which one a badge refers to.
+  const getOrderStatusBadge = (status) => {
+    const statusMap = {
+      Pending: 'bg-yellow-100 text-yellow-800',
+      Confirmed: 'bg-emerald-100 text-emerald-800',
+      'In Progress': 'bg-purple-100 text-purple-800',
+      Completed: 'bg-blue-100 text-blue-800',
+      Cancelled: 'bg-red-100 text-red-800',
+    };
+    return (
+      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${statusMap[status] || 'bg-muted text-muted-foreground'}`}>
+        {status || 'Unknown'}
       </span>
     );
   };
@@ -166,7 +184,8 @@ const DesignWorkList = () => {
                         <TableHead className="font-semibold">Event Date</TableHead>
                         <TableHead className="font-semibold">Location</TableHead>
                         <TableHead className="font-semibold">Package</TableHead>
-                        <TableHead className="font-semibold">Status</TableHead>
+                        <TableHead className="font-semibold">Order Status</TableHead>
+                        <TableHead className="font-semibold">Design Status</TableHead>
                         <TableHead className="text-right pr-6 font-semibold">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -187,6 +206,9 @@ const DesignWorkList = () => {
                             </TableCell>
                             <TableCell className="text-muted-foreground">
                               {order?.product?.package_name || 'Custom'}
+                            </TableCell>
+                            <TableCell>
+                              {getOrderStatusBadge(order?.status)}
                             </TableCell>
                             <TableCell>
                               {getStatusBadge(work.status)}

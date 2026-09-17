@@ -7,7 +7,6 @@ import { Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { userService } from '@/services/userService.js';
 import { orderService } from '@/services/orderService.js';
-import { designWorkService } from '@/services/designWorkService.js';
 
 const AssignDesignerModal = ({ open, onOpenChange, orderId, onSuccess }) => {
   const [designers, setDesigners] = useState([]);
@@ -52,23 +51,10 @@ const AssignDesignerModal = ({ open, onOpenChange, orderId, onSuccess }) => {
 
     setSaving(true);
     try {
-      await orderService.update(orderId, {
-        assigned_designer_id: selectedDesigner
-      });
-
-      const existingDesignWork = await designWorkService.listAll({ orderId });
-
-      if (existingDesignWork && existingDesignWork.length > 0) {
-        await designWorkService.update(existingDesignWork[0].id, {
-          designer_id: selectedDesigner
-        });
-      } else {
-        await designWorkService.create({
-          order_id: orderId,
-          designer_id: selectedDesigner,
-          status: 'pending'
-        });
-      }
+      // Assigns both orders.assigned_designer_id and the design_work record
+      // in one atomic backend call, so the order and the designer's own
+      // project list can never disagree about who is assigned.
+      await orderService.assignDesigner(orderId, selectedDesigner);
 
       toast.success('Designer assigned successfully');
       if (onSuccess) onSuccess();

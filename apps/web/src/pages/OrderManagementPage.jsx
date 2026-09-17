@@ -21,6 +21,7 @@ import { orderService } from '@/services/orderService.js';
 import { invoiceService } from '@/services/invoiceService.js';
 import { paymentService } from '@/services/paymentService.js';
 import { crewAssignmentService } from '@/services/crewAssignmentService.js';
+import { designWorkService } from '@/services/designWorkService.js';
 import { format } from 'date-fns';
 import OrderForm from '@/components/OrderForm';
 import AssignDesignerModal from '@/components/AssignDesignerModal';
@@ -51,11 +52,12 @@ const OrderManagementPage = () => {
     setLoading(true);
     setError(false);
     try {
-      const [records, invoices, payments, crewAssignments] = await Promise.all([
+      const [records, invoices, payments, crewAssignments, designWorks] = await Promise.all([
         orderService.listAll({ sort: 'created_at', order: 'desc' }),
         invoiceService.listAll(),
         paymentService.listAll(),
         crewAssignmentService.listAll(),
+        designWorkService.listAll(),
       ]);
 
       const invoicesByOrder = new Map();
@@ -70,10 +72,18 @@ const OrderManagementPage = () => {
         paymentsByInvoice.get(p.invoice_id).push(p);
       });
 
+      // Keep the attendance status alongside each crew member's name, not
+      // just the name, so the owner can tell "assigned" apart from "assigned
+      // and confirmed" without opening the order.
       const crewByOrder = new Map();
       crewAssignments.forEach((ca) => {
         if (!crewByOrder.has(ca.order_id)) crewByOrder.set(ca.order_id, []);
-        if (ca.crew?.name) crewByOrder.get(ca.order_id).push(ca.crew.name);
+        if (ca.crew?.name) crewByOrder.get(ca.order_id).push({ name: ca.crew.name, attendanceStatus: ca.attendance_status });
+      });
+
+      const designWorkByOrder = new Map();
+      designWorks.forEach((dw) => {
+        if (!designWorkByOrder.has(dw.order_id)) designWorkByOrder.set(dw.order_id, dw);
       });
 
       const ordersEnhanced = records.map((order) => {
@@ -90,6 +100,7 @@ const OrderManagementPage = () => {
           totalAmount: firstInvoice?.total_amount || 0,
           paymentsReceived: totalPayments,
           crew: crewByOrder.get(order.id) || [],
+          designWork: designWorkByOrder.get(order.id) || null,
         };
       });
 
@@ -111,6 +122,24 @@ const OrderManagementPage = () => {
       Cancelled: 'bg-red-100 text-red-800'
     };
     return colors[status] || colors.Pending;
+  };
+
+  // Design work status — a separate lifecycle from the order's own status
+  // above, shown next to the designer's name so it's never ambiguous which
+  // status a badge refers to.
+  const getDesignStatusBadge = (status) => {
+    const map = {
+      pending: { label: 'Pending', classes: 'bg-muted text-muted-foreground' },
+      in_progress: { label: 'In Progress', classes: 'bg-blue-100 text-blue-800' },
+      revision: { label: 'Revision', classes: 'bg-orange-100 text-orange-800' },
+      completed: { label: 'Completed', classes: 'bg-green-100 text-green-800' },
+    };
+    const mapped = map[status] || map.pending;
+    return (
+      <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold whitespace-nowrap ${mapped.classes}`}>
+        {mapped.label}
+      </span>
+    );
   };
 
   const openDesignerModal = (orderId) => {
@@ -326,7 +355,7 @@ const OrderManagementPage = () => {
                           <span className="inline-flex items-center gap-1">Date {renderSortIcon('event_date')}</span>
                         </TableHead>
                         <TableHead className="cursor-pointer select-none" onClick={() => handleSort('status')}>
-                          <span className="inline-flex items-center gap-1">Status {renderSortIcon('status')}</span>
+                          <span className="inline-flex items-center gap-1">Order Status {renderSortIcon('status')}</span>
                         </TableHead>
                         <TableHead>Designer</TableHead>
                         <TableHead>Crew</TableHead>
@@ -357,8 +386,11 @@ const OrderManagementPage = () => {
                           
                           <TableCell>
                             {order.assigned_designer ? (
-                              <div className="badge-assigned">
-                                {order.assigned_designer.name}
+                              <div className="flex flex-col gap-1 items-start">
+                                <div className="badge-assigned">
+                                  {order.assigned_designer.name}
+                                </div>
+                                {order.designWork && getDesignStatusBadge(order.designWork.status)}
                               </div>
                             ) : (
                               <div className="flex flex-col gap-2 items-start">
@@ -372,21 +404,26 @@ const OrderManagementPage = () => {
 
                           <TableCell>
                             {order.crew && order.crew.length > 0 ? (
-                              order.crew.length > 2 ? (
-                                <div className="flex flex-wrap gap-1 items-center max-w-[150px]">
-                                  <span className="tag-crew">{order.crew[0]}</span>
-                                  <span className="tag-crew">{order.crew[1]}</span>
-                                  <div className="badge-assigned px-1.5 py-0.5 text-[10px]">
-                                    +{order.crew.length - 2} crew
+                              <div className="flex flex-col gap-1 items-start">
+                                {order.crew.length > 2 ? (
+                                  <div className="flex flex-wrap gap-1 items-center max-w-[150px]">
+                                    <span className="tag-crew">{order.crew[0].name}</span>
+                                    <span className="tag-crew">{order.crew[1].name}</span>
+                                    <div className="badge-assigned px-1.5 py-0.5 text-[10px]">
+                                      +{order.crew.length - 2} crew
+                                    </div>
                                   </div>
-                                </div>
-                              ) : (
-                                <div className="flex flex-wrap gap-1 max-w-[150px]">
-                                  {order.crew.map((c, i) => (
-                                    <span className="tag-crew" key={i}>{c}</span>
-                                  ))}
-                                </div>
-                              )
+                                ) : (
+                                  <div className="flex flex-wrap gap-1 max-w-[150px]">
+                                    {order.crew.map((c, i) => (
+                                      <span className="tag-crew" key={i}>{c.name}</span>
+                                    ))}
+                                  </div>
+                                )}
+                                <span className="text-[10px] font-semibold text-muted-foreground">
+                                  {order.crew.filter((c) => ['confirmed', 'completed', 'hadir'].includes(c.attendanceStatus)).length}/{order.crew.length} confirmed
+                                </span>
+                              </div>
                             ) : (
                               <div className="flex flex-col gap-2 items-start">
                                 <div className="badge-unassigned">Not Assigned</div>

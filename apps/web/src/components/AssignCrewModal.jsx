@@ -7,6 +7,7 @@ import { Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { userService } from '@/services/userService.js';
 import { crewAssignmentService } from '@/services/crewAssignmentService.js';
+import { orderService } from '@/services/orderService.js';
 
 const AssignCrewModal = ({ open, onOpenChange, orderId, onSuccess }) => {
   const [crewMembers, setCrewMembers] = useState([]);
@@ -50,25 +51,10 @@ const AssignCrewModal = ({ open, onOpenChange, orderId, onSuccess }) => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const existingIds = existingAssignments.map(a => a.crew_id);
-      
-      const toAdd = selectedIds.filter(id => !existingIds.includes(id));
-      const toRemove = existingAssignments.filter(a => !selectedIds.includes(a.crew_id));
-
-      if (toRemove.length > 0) {
-        await Promise.all(toRemove.map(a => crewAssignmentService.remove(a.id)));
-      }
-
-      if (toAdd.length > 0) {
-        await Promise.all(toAdd.map(id =>
-          crewAssignmentService.create({
-            order_id: orderId,
-            crew_id: id,
-            status: 'pending',
-            attendance_status: 'pending' // Explicitly use valid enum
-          })
-        ));
-      }
+      // Syncs the order's whole crew list in one atomic backend call (add +
+      // remove together), so a crew member's own assignment list can never
+      // fall out of sync with what the owner's order view shows.
+      await orderService.assignCrew(orderId, selectedIds);
 
       toast.success('Crew assignments updated successfully');
       if (onSuccess) onSuccess();

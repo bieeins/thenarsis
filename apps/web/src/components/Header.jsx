@@ -178,7 +178,7 @@ const Header = () => {
           ) : (
             <>
               {/* Notifications */}
-              {currentUser.role !== 'crew' && (
+              {!['crew', 'designer'].includes(currentUser.role) && (
                 <Button
                   variant="ghost"
                   size="icon"

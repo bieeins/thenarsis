@@ -24,6 +24,14 @@ export const createOrderSchema = z.object({
 
 export const updateOrderSchema = createOrderSchema.omit({ items: true }).partial();
 
+export const assignDesignerSchema = z.object({
+  designer_id: z.string().min(1),
+});
+
+export const assignCrewSchema = z.object({
+  crew_ids: z.array(z.string().min(1)).default([]),
+});
+
 export const ordersListQuerySchema = z.object({
   page: z.coerce.number().optional(),
   perPage: z.coerce.number().optional(),

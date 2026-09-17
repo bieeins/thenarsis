@@ -3,7 +3,7 @@ import { ordersController } from '../controllers/orders.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { authorize } from '../middleware/authorize.js';
 import { validateBody, validateQuery } from '../middleware/validate.js';
-import { createOrderSchema, updateOrderSchema, ordersListQuerySchema } from '../validators/orders.validators.js';
+import { createOrderSchema, updateOrderSchema, ordersListQuerySchema, assignDesignerSchema, assignCrewSchema } from '../validators/orders.validators.js';
 
 const router = Router();
 
@@ -15,5 +15,7 @@ router.get('/:id/items', ordersController.listItems);
 router.post('/', authorize('owner'), validateBody(createOrderSchema), ordersController.create);
 router.patch('/:id', authorize('owner'), validateBody(updateOrderSchema), ordersController.update);
 router.delete('/:id', authorize('owner'), ordersController.remove);
+router.put('/:id/designer', authorize('owner'), validateBody(assignDesignerSchema), ordersController.assignDesigner);
+router.put('/:id/crew', authorize('owner'), validateBody(assignCrewSchema), ordersController.assignCrew);
 
 export default router;
