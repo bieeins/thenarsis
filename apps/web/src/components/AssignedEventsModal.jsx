@@ -205,10 +205,14 @@ const AssignedEventsModal = ({ isOpen, onOpenChange, events, loading, error, onR
                     </div>
 
                     <div className="flex items-center justify-between pt-3 border-t border-border/50">
-                      <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-500 font-semibold bg-emerald-50 dark:bg-emerald-950/30 px-2 py-1 rounded-md">
-                        <Banknote className="w-4 h-4" />
-                        <span className="font-numeric text-sm">{formatCurrency(evt.attendance_amount)}</span>
-                      </div>
+                      {evt.attendance_amount ? (
+                        <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-500 font-semibold bg-emerald-50 dark:bg-emerald-950/30 px-2 py-1 rounded-md">
+                          <Banknote className="w-4 h-4" />
+                          <span className="font-numeric text-sm">{formatCurrency(evt.attendance_amount)}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">No fee set</span>
+                      )}
                       <div className="text-xs font-semibold text-muted-foreground flex items-center group-hover:text-[hsl(var(--accent-yellow-active))] transition-colors">
                         View Details
                         <ChevronRight className="w-4 h-4 ml-0.5 group-hover:translate-x-1 transition-transform" />

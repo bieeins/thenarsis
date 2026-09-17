@@ -56,8 +56,13 @@
     --status-in-progress: 24 95% 53%;  /* Orange */
     --status-completed: 142 76% 36%;   /* Green */
     --status-cancelled: 0 84% 60%;     /* Red */
+
+    /* Crew attendance badges (paired with text-black for pending, text-white for the others) */
+    --badge-attendance-pending: 38 92% 50%;    /* Amber */
+    --badge-attendance-confirmed: 160 84% 39%; /* Emerald */
+    --badge-attendance-completed: 217 91% 60%; /* Blue */
   }
-  
+
   .dark {
     --background: 0 0% 10%;
     --foreground: 0 0% 98%;
@@ -102,6 +107,11 @@
     --status-in-progress: 24 95% 60%;
     --status-completed: 142 71% 45%;
     --status-cancelled: 0 84% 65%;
+
+    /* Crew attendance badges Dark */
+    --badge-attendance-pending: 38 92% 55%;
+    --badge-attendance-confirmed: 160 84% 45%;
+    --badge-attendance-completed: 217 91% 65%;
   }
 }
 

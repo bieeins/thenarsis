@@ -178,18 +178,20 @@ const Header = () => {
           ) : (
             <>
               {/* Notifications */}
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="relative text-muted-foreground hover:text-foreground hover:bg-[hsl(var(--accent-yellow))]/10"
-                onClick={() => navigate('/notifications')}
-              >
-                <Bell className="h-5 w-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-background" />
-                )}
-                <span className="sr-only">Notifications</span>
-              </Button>
+              {currentUser.role !== 'crew' && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative text-muted-foreground hover:text-foreground hover:bg-[hsl(var(--accent-yellow))]/10"
+                  onClick={() => navigate('/notifications')}
+                >
+                  <Bell className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-background" />
+                  )}
+                  <span className="sr-only">Notifications</span>
+                </Button>
+              )}
 
               {/* User Menu */}
               <DropdownMenu>

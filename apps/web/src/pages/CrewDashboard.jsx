@@ -4,11 +4,12 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Skeleton } from '@/components/ui/skeleton.jsx';
-import { Camera, ArrowRight, CheckCircle2, HelpCircle, CalendarDays, AlertCircle, RefreshCcw, Activity, Calendar as CalendarIcon } from 'lucide-react';
+import { Camera, ArrowRight, CheckCircle2, CalendarDays, AlertCircle, RefreshCcw, Activity, Calendar as CalendarIcon, Banknote } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useCrewEvents } from '@/hooks/useCrewEvents.js';
 import AssignedEventsModal from '@/components/AssignedEventsModal.jsx';
 import ErrorBoundary from '@/components/ErrorBoundary.jsx';
+import { formatRupiah } from '@/lib/currency.js';
 
 import '@/lib/debugUtils.js';
 
@@ -27,7 +28,7 @@ const CrewDashboardContent = () => {
       totalAssigned: events.length,
       confirmed: events.filter(e => e && e.attendance_status === 'confirmed').length,
       completed: events.filter(e => e && e.attendance_status === 'completed').length,
-      pending: events.filter(e => e && (!e.attendance_status || e.attendance_status === 'pending')).length
+      totalFee: events.reduce((sum, e) => sum + (e && e.attendance_amount ? Number(e.attendance_amount) : 0), 0)
     };
   }, [events]);
 
@@ -119,7 +120,7 @@ const CrewDashboardContent = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card 
+            <Card
               className={`border border-border/60 shadow-sm transition-all duration-300 group relative overflow-hidden bg-card ${!eventsError ? 'cursor-pointer hover:shadow-lg hover:scale-[1.02]' : 'opacity-75'}`}
               onClick={handleTotalAssignedClick}
             >
@@ -128,14 +129,14 @@ const CrewDashboardContent = () => {
                 <div className="p-4 bg-[hsl(var(--accent-yellow))]/10 text-[hsl(var(--accent-yellow-active))] rounded-2xl shrink-0 group-hover:bg-[hsl(var(--accent-yellow))] group-hover:text-black transition-colors">
                   <Camera className="w-6 h-6" />
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">Total Assigned</p>
                   {eventsLoading ? (
                     <Skeleton className="h-9 w-16 mt-1" />
                   ) : eventsError ? (
                     <p className="text-xl font-bold text-muted-foreground mt-1">--</p>
                   ) : (
-                    <p className="text-3xl font-extrabold font-numeric mt-0.5">{stats.totalAssigned}</p>
+                    <p className="text-3xl font-extrabold font-numeric mt-0.5 break-words">{stats.totalAssigned}</p>
                   )}
                 </div>
               </CardContent>
@@ -146,14 +147,14 @@ const CrewDashboardContent = () => {
                 <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 rounded-2xl shrink-0 border border-emerald-100 dark:border-emerald-900/50">
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-muted-foreground">Confirmed</p>
                   {eventsLoading ? (
                     <Skeleton className="h-9 w-16 mt-1" />
                   ) : eventsError ? (
                     <p className="text-xl font-bold text-muted-foreground mt-1">--</p>
                   ) : (
-                    <p className="text-3xl font-extrabold font-numeric text-emerald-700 dark:text-emerald-500 mt-0.5">{stats.confirmed}</p>
+                    <p className="text-3xl font-extrabold font-numeric text-emerald-700 dark:text-emerald-500 mt-0.5 break-words">{stats.confirmed}</p>
                   )}
                 </div>
               </CardContent>
@@ -164,14 +165,14 @@ const CrewDashboardContent = () => {
                 <div className="p-4 bg-blue-50 dark:bg-blue-950/40 text-blue-600 rounded-2xl shrink-0 border border-blue-100 dark:border-blue-900/50">
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-muted-foreground">Completed</p>
                   {eventsLoading ? (
                     <Skeleton className="h-9 w-16 mt-1" />
                   ) : eventsError ? (
                     <p className="text-xl font-bold text-muted-foreground mt-1">--</p>
                   ) : (
-                    <p className="text-3xl font-extrabold font-numeric text-blue-700 dark:text-blue-500 mt-0.5">{stats.completed}</p>
+                    <p className="text-3xl font-extrabold font-numeric text-blue-700 dark:text-blue-500 mt-0.5 break-words">{stats.completed}</p>
                   )}
                 </div>
               </CardContent>
@@ -179,17 +180,17 @@ const CrewDashboardContent = () => {
 
             <Card className="border border-border/60 shadow-sm">
               <CardContent className="p-6 flex items-center gap-5">
-                <div className="p-4 bg-amber-50 dark:bg-amber-950/40 text-[hsl(var(--accent-yellow-active))] rounded-2xl shrink-0 border border-amber-100 dark:border-amber-900/50">
-                  <HelpCircle className="w-6 h-6" />
+                <div className="p-4 bg-teal-50 dark:bg-teal-950/40 text-teal-600 rounded-2xl shrink-0 border border-teal-100 dark:border-teal-900/50">
+                  <Banknote className="w-6 h-6" />
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Pending Reply</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-muted-foreground">Total Fee</p>
                   {eventsLoading ? (
-                    <Skeleton className="h-9 w-16 mt-1" />
+                    <Skeleton className="h-9 w-24 mt-1" />
                   ) : eventsError ? (
                     <p className="text-xl font-bold text-muted-foreground mt-1">--</p>
                   ) : (
-                    <p className="text-3xl font-extrabold font-numeric text-amber-700 dark:text-amber-500 mt-0.5">{stats.pending}</p>
+                    <p className="text-2xl font-extrabold font-numeric text-teal-700 dark:text-teal-500 mt-0.5 break-words">{formatRupiah(stats.totalFee)}</p>
                   )}
                 </div>
               </CardContent>

@@ -92,4 +92,54 @@ describe('crew_assignments', () => {
 
     expect(res.status).toBe(403);
   });
+
+  it('lets a crew member see teammates on a shared order, without their compensation details', async () => {
+    const otherCrewRes = await request(app)
+      .post('/api/users')
+      .set(authHeader(ownerToken))
+      .send({ email: 'teammate@test.local', password: 'Teammate123!', name: 'Teammate Crew', role: 'crew' });
+
+    await request(app)
+      .post('/api/crew-assignments')
+      .set(authHeader(ownerToken))
+      .send({ order_id: orderId, crew_id: crew.id, status: 'pending', fee: 200 });
+
+    await request(app)
+      .post('/api/crew-assignments')
+      .set(authHeader(ownerToken))
+      .send({ order_id: orderId, crew_id: otherCrewRes.body.data.id, status: 'pending', fee: 350 });
+
+    const listRes = await request(app)
+      .get('/api/crew-assignments')
+      .query({ orderId })
+      .set(authHeader(crewToken));
+
+    expect(listRes.status).toBe(200);
+    expect(listRes.body.data).toHaveLength(2);
+
+    const own = listRes.body.data.find((row) => row.crew_id === crew.id);
+    const teammate = listRes.body.data.find((row) => row.crew_id === otherCrewRes.body.data.id);
+    expect(own.fee).toBe(200);
+    expect(teammate.fee).toBeNull();
+  });
+
+  it('does not leak assignments from an order a crew member is not part of', async () => {
+    const otherCrewRes = await request(app)
+      .post('/api/users')
+      .set(authHeader(ownerToken))
+      .send({ email: 'unrelated@test.local', password: 'Unrelated123!', name: 'Unrelated Crew', role: 'crew' });
+
+    await request(app)
+      .post('/api/crew-assignments')
+      .set(authHeader(ownerToken))
+      .send({ order_id: orderId, crew_id: otherCrewRes.body.data.id, status: 'pending' });
+
+    const listRes = await request(app)
+      .get('/api/crew-assignments')
+      .query({ orderId })
+      .set(authHeader(crewToken));
+
+    expect(listRes.status).toBe(200);
+    expect(listRes.body.data).toHaveLength(0);
+  });
 });

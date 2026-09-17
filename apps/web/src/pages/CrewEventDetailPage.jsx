@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
-import { ArrowLeft, Calendar, MapPin, User, Phone, Package, FileText, CheckCircle2, Loader2, Link as LinkIcon, ExternalLink, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, User, Phone, Package, FileText, CheckCircle2, Loader2, Link as LinkIcon, ExternalLink, Image as ImageIcon, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card.jsx';
 import { Checkbox } from '@/components/ui/checkbox.jsx';
@@ -20,6 +20,7 @@ const CrewEventDetailPage = () => {
   const { currentUser } = useAuth();
   const [assignment, setAssignment] = useState(null);
   const [designWork, setDesignWork] = useState(null);
+  const [teamAssignments, setTeamAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
   const [isAttending, setIsAttending] = useState(false);
@@ -66,6 +67,15 @@ const CrewEventDetailPage = () => {
           console.log('No design work record found for this order:', dwErr);
           setDesignWork(null);
         }
+
+        // Who else is assigned to this same event — so a crew member knows
+        // when they're one of several people covering it.
+        try {
+          const teamRes = await crewAssignmentService.list({ orderId: record.order.id });
+          setTeamAssignments(teamRes.data || []);
+        } catch (teamErr) {
+          setTeamAssignments([]);
+        }
       }
     } catch (error) {
       console.error('Error fetching event details:', error);
@@ -79,7 +89,11 @@ const CrewEventDetailPage = () => {
   const handleAttendanceConfirm = async () => {
     try {
       setConfirming(true);
-      await crewAssignmentService.update(eventId, {
+      // Always update by the resolved assignment's own id, never the route
+      // param: when navigating here via an order id shared by multiple crew
+      // (e.g. from the dashboard's assigned-events list), using that id
+      // directly would target the wrong crew_assignment record.
+      await crewAssignmentService.update(assignment.id, {
         attendance_confirmation: isAttending,
         attendance_status: isAttending ? 'confirmed' : 'pending'
       });
@@ -171,6 +185,14 @@ const CrewEventDetailPage = () => {
                     <p className="text-sm text-muted-foreground flex items-center gap-2"><Package className="w-4 h-4" /> Package</p>
                     <p className="font-medium">{product?.package_name || 'Custom Package'}</p>
                   </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground flex items-center gap-2"><Users className="w-4 h-4" /> Crew Assigned</p>
+                    <p className="font-medium">
+                      {teamAssignments.length > 0
+                        ? teamAssignments.map((m) => m.crew?.name || 'Unknown').join(', ')
+                        : 'You'}
+                    </p>
+                  </div>
                 </div>
 
                 {order.description && (
@@ -221,6 +243,34 @@ const CrewEventDetailPage = () => {
                   </Button>
                 </CardContent>
               </Card>
+
+              {teamAssignments.length > 1 && (
+                <Card className="shadow-sm border-border/60">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Users className="w-5 h-5 text-primary" /> Crew on This Event
+                    </CardTitle>
+                    <CardDescription>{teamAssignments.length} crew members are assigned to this event</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {teamAssignments.map((member) => (
+                      <div key={member.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+                        <span className="font-medium text-sm">
+                          {member.crew?.name || 'Unknown'}
+                          {member.crew_id === currentUser?.id && <span className="text-muted-foreground font-normal"> (You)</span>}
+                        </span>
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          member.attendance_status === 'confirmed' || member.attendance_status === 'completed' || member.attendance_status === 'hadir'
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
+                            : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+                        }`}>
+                          {(member.attendance_status || 'pending').replace('_', ' ').toUpperCase()}
+                        </span>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Design Assets Card */}
               <Card className="shadow-sm border-border/60">

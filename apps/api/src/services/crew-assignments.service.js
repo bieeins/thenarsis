@@ -6,16 +6,45 @@ import { logger } from '../utils/logger.js';
 
 const SORTABLE_FIELDS = ['created_at', 'status', 'assigned_date'];
 
+// Fee/compensation fields are private to the crew member they belong to.
+// A teammate should only see who else is on the same event and their
+// attendance status, never someone else's pay.
+function hideCompensation(row) {
+  return {
+    ...row,
+    fee: null,
+    paid_amount: null,
+    pending_amount: null,
+    attendance_amount: null,
+    crew_notes: null,
+  };
+}
+
 export const crewAssignmentsService = {
   async list(query, requester) {
     const { page, perPage, offset } = parsePagination(query);
     const { field, order } = parseSort(query, SORTABLE_FIELDS);
     const filters = { orderId: query.orderId, status: query.status, page, perPage, offset, sortField: field, sortOrder: order };
-    if (requester.role !== 'owner') filters.crewId = requester.id;
-    else if (query.crewId) filters.crewId = query.crewId;
+
+    let restrictToSelf = requester.role !== 'owner';
+    if (restrictToSelf && query.orderId) {
+      // A crew member may see the full crew list for an order they are
+      // themselves assigned to (so they know who else is working the same
+      // event), but nothing about orders they have no assignment on.
+      const own = await crewAssignmentsRepository.list({
+        orderId: query.orderId, crewId: requester.id, page: 1, perPage: 1, offset: 0, sortField: 'created_at', sortOrder: 'asc',
+      });
+      restrictToSelf = own.totalItems === 0;
+    }
+    if (restrictToSelf) filters.crewId = requester.id;
+    else if (requester.role === 'owner' && query.crewId) filters.crewId = query.crewId;
 
     const { rows, totalItems } = await crewAssignmentsRepository.list(filters);
-    return { rows, page, perPage, totalItems };
+    const sanitizedRows = requester.role === 'owner'
+      ? rows
+      : rows.map((row) => (row.crew_id === requester.id ? row : hideCompensation(row)));
+
+    return { rows: sanitizedRows, page, perPage, totalItems };
   },
 
   async get(id, requester) {
