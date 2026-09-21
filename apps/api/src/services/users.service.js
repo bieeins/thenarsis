@@ -5,6 +5,7 @@ import { conflict, forbidden, notFound } from '../utils/http-error.js';
 import { newId } from '../utils/id.js';
 import { notificationService } from './notification.service.js';
 import { logger } from '../utils/logger.js';
+import { sessionsRepository } from '../repositories/sessions.repository.js';
 
 const SORTABLE_FIELDS = ['created_at', 'name', 'email', 'role'];
 const BCRYPT_ROUNDS = 12;
@@ -54,6 +55,16 @@ export const usersService = {
     await this.get(id);
     await usersRepository.update(id, data);
     return usersRepository.findPublicById(id);
+  },
+
+  // Owner-initiated reset for a team member who forgot/changed their password.
+  // Revokes the member's existing sessions so the old credentials stop working
+  // everywhere (the owner's own session is left alone if they reset themselves).
+  async resetPassword(id, newPassword, requester) {
+    await this.get(id);
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await usersRepository.update(id, { password_hash: passwordHash });
+    if (id !== requester.id) await sessionsRepository.revokeAllForUser(id);
   },
 
   async remove(id, requester) {

@@ -17,6 +17,9 @@ export const userService = {
   async update(id, data) {
     return apiClient.patch(`/api/users/${id}`, data);
   },
+  async resetPassword(id, newPassword) {
+    return apiClient.put(`/api/users/${id}/password`, { new_password: newPassword });
+  },
   async remove(id) {
     return apiClient.delete(`/api/users/${id}`);
   },

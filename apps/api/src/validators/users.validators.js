@@ -14,6 +14,10 @@ export const updateUserSchema = z.object({
   role: z.enum(['owner', 'designer', 'crew', 'design_reviewer']).optional(),
 });
 
+export const resetPasswordSchema = z.object({
+  new_password: z.string().min(8),
+});
+
 export const usersListQuerySchema = z.object({
   page: z.coerce.number().optional(),
   perPage: z.coerce.number().optional(),

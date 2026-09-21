@@ -31,7 +31,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { userService } from '@/services/userService.js';
 import { toast } from 'sonner';
-import { Users, Plus, Pencil, Trash2, Shield, AlertCircle, Check, Copy } from 'lucide-react';
+import { Users, Plus, Pencil, Trash2, Shield, AlertCircle, Check, Copy, KeyRound, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const generateSecurePassword = () => {
@@ -69,6 +69,12 @@ const TeamManagementPage = () => {
   // For showing credentials after creation
   const [newMemberCredentials, setNewMemberCredentials] = useState(null);
   const [copied, setCopied] = useState(false);
+
+  // Owner-initiated password reset for another team member
+  const [passwordUser, setPasswordUser] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+  const [passwordCopied, setPasswordCopied] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -195,6 +201,44 @@ const TeamManagementPage = () => {
     }
   };
 
+  const handleOpenPasswordDialog = (user) => {
+    setPasswordUser(user);
+    setNewPassword(generateSecurePassword());
+    setPasswordCopied(false);
+  };
+
+  const handleClosePasswordDialog = () => {
+    if (passwordSubmitting) return;
+    setPasswordUser(null);
+    setNewPassword('');
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters');
+      return;
+    }
+    setPasswordSubmitting(true);
+    try {
+      await userService.resetPassword(passwordUser.id, newPassword);
+      toast.success(`Password updated for ${passwordUser.name}. Their active sessions were signed out.`);
+      setPasswordUser(null);
+      setNewPassword('');
+    } catch (error) {
+      toast.error(`Failed to change password: ${error.message || 'unexpected error'}`);
+    } finally {
+      setPasswordSubmitting(false);
+    }
+  };
+
+  const copyNewPassword = () => {
+    navigator.clipboard.writeText(newPassword);
+    setPasswordCopied(true);
+    setTimeout(() => setPasswordCopied(false), 2000);
+    toast.success('Password copied to clipboard');
+  };
+
   const copyCredentials = () => {
     if (newMemberCredentials) {
       const text = `Welcome to Thenarsis!\n\nLogin Email: ${newMemberCredentials.email}\nTemporary Password: ${newMemberCredentials.password}\nRole: ${newMemberCredentials.role}\n\nPlease login and change your password immediately.`;
@@ -313,6 +357,11 @@ const TeamManagementPage = () => {
                           <Pencil className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors" />
                         </Button>
                         {user.id !== currentUser?.id && (
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenPasswordDialog(user)} aria-label="Change password" title="Change password">
+                            <KeyRound className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors" />
+                          </Button>
+                        )}
+                        {user.id !== currentUser?.id && (
                           <Button variant="ghost" size="icon" onClick={() => handleDelete(user.id)} aria-label="Delete user">
                             <Trash2 className="w-4 h-4 text-destructive/70 hover:text-destructive transition-colors" />
                           </Button>
@@ -418,6 +467,50 @@ const TeamManagementPage = () => {
               </Button>
               <Button type="submit" disabled={submitting} className="min-w-[120px] transition-all active:scale-[0.98]">
                 {submitting ? 'Saving...' : (selectedUser ? 'Save Changes' : 'Create Member')}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Password Dialog */}
+      <Dialog open={!!passwordUser} onOpenChange={(open) => !open && handleClosePasswordDialog()}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Change Password</DialogTitle>
+            <DialogDescription>
+              Set a new password for {passwordUser?.name}. They will be signed out of any active sessions and must log in with this new password.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleResetPassword} className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="new_password">New Password <span className="text-destructive">*</span></Label>
+              <div className="flex gap-2">
+                <Input
+                  id="new_password"
+                  type="text"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  autoComplete="off"
+                  className="font-mono text-foreground"
+                />
+                <Button type="button" variant="outline" size="icon" onClick={() => setNewPassword(generateSecurePassword())} aria-label="Generate password" title="Generate a secure password">
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
+                <Button type="button" variant="outline" size="icon" onClick={copyNewPassword} aria-label="Copy password" title="Copy password">
+                  {passwordCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Minimum 8 characters. Copy it and share it with the team member securely.</p>
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button type="button" variant="ghost" onClick={handleClosePasswordDialog} disabled={passwordSubmitting}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={passwordSubmitting || newPassword.length < 8} className="min-w-[120px]">
+                {passwordSubmitting ? 'Saving...' : 'Update Password'}
               </Button>
             </div>
           </form>

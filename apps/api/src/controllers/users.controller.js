@@ -27,6 +27,13 @@ export const usersController = {
     } catch (err) { next(err); }
   },
 
+  async resetPassword(req, res, next) {
+    try {
+      await usersService.resetPassword(req.params.id, req.body.new_password, req.user);
+      ok(res, { reset: true });
+    } catch (err) { next(err); }
+  },
+
   async remove(req, res, next) {
     try {
       await usersService.remove(req.params.id, req.user);
