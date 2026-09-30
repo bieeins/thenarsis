@@ -20,6 +20,8 @@ import { toast } from 'sonner';
 import { productService } from '@/services/productService.js';
 import { orderService } from '@/services/orderService.js';
 import { invoiceService } from '@/services/invoiceService.js';
+import { orderItemService } from '@/services/orderItemService.js';
+import { format } from 'date-fns';
 import { formatRupiah } from '@/lib/currency.js';
 
 const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
@@ -36,6 +38,9 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
     description: ''
   });
   const [selectedProduct, setSelectedProduct] = useState(null);
+  // Existing invoice/item of the order being edited, so the price can be adjusted there too.
+  const [existingInvoice, setExistingInvoice] = useState(null);
+  const [existingItem, setExistingItem] = useState(null);
 
   useEffect(() => {
     loadProducts();
@@ -47,7 +52,8 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
         customer_name: order.customer_name || '',
         phone_number: order.phone_number || '',
         event_name: order.event_name || '',
-        event_date: order.event_date || '',
+        // The API returns a full timestamp; a date input only accepts yyyy-MM-dd.
+        event_date: order.event_date ? format(new Date(order.event_date), 'yyyy-MM-dd') : '',
         event_location: order.event_location || '',
         product_id: order.product_id || '',
         adjusted_price: '',
@@ -65,7 +71,37 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
         description: ''
       });
       setSelectedProduct(null);
+      setExistingInvoice(null);
+      setExistingItem(null);
     }
+  }, [order, open]);
+
+  // Editing: load the order's current invoice + item and prefill the price field.
+  useEffect(() => {
+    if (!order || !open) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [invoices, items] = await Promise.all([
+          invoiceService.listAll(),
+          orderItemService.listByOrder(order.id),
+        ]);
+        if (cancelled) return;
+        const invoice = invoices.find((inv) => inv.order_id === order.id) || null;
+        setExistingInvoice(invoice);
+        setExistingItem(items?.[0] || null);
+        if (invoice) {
+          setFormData((prev) => ({ ...prev, adjusted_price: String(invoice.total_amount) }));
+        }
+      } catch (err) {
+        // Price stays uneditable if it can't be loaded; the rest of the order can still be edited.
+        if (!cancelled) {
+          setExistingInvoice(null);
+          setExistingItem(null);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
   }, [order, open]);
 
   const loadProducts = async () => {
@@ -111,6 +147,21 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
           product_id: formData.product_id,
           description: formData.description
         });
+
+        if (existingInvoice) {
+          const baseProduct = products.find((p) => p.id === formData.product_id);
+          const newPrice = formData.adjusted_price !== ''
+            ? parseFloat(formData.adjusted_price)
+            : (baseProduct?.base_price ?? Number(existingInvoice.total_amount));
+          if (newPrice !== Number(existingInvoice.total_amount)) {
+            await invoiceService.update(existingInvoice.id, { total_amount: newPrice });
+            if (existingItem) {
+              await orderItemService.update(existingItem.id, {
+                adjusted_price: formData.adjusted_price !== '' ? newPrice : null,
+              });
+            }
+          }
+        }
         toast.success('Order updated successfully');
       } else {
         const invoiceNumber = generateInvoiceNumber();
@@ -259,9 +310,9 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
             </div>
           )}
 
-          {!order && (
+          {(!order || existingInvoice) && (
             <div>
-              <Label htmlFor="adjusted_price">Adjusted Price (Optional)</Label>
+              <Label htmlFor="adjusted_price">{order ? 'Order Price' : 'Adjusted Price (Optional)'}</Label>
               <Input
                 id="adjusted_price"
                 type="number"
@@ -273,7 +324,9 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
                 placeholder="Leave empty to use base price"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Enter a custom price for discounts or special pricing
+                {order
+                  ? 'Changing this updates the invoice total. Leave empty to reset to the package base price.'
+                  : 'Enter a custom price for discounts or special pricing'}
               </p>
             </div>
           )}
