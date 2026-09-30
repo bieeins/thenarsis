@@ -191,7 +191,7 @@ const downloadCSV = (content, filename) => {
 };
 
 export const exportDesignFeesToCSV = (designFees, filters = {}) => {
-  const headers = ['Designer Name', 'Event Name', 'Fee Amount (Rp)', 'Submission Date', 'Status', 'Notes'];
+  const headers = ['Designer Name', 'Event Name', 'Event Date', 'Fee Amount (Rp)', 'Submission Date', 'Status', 'Notes'];
   
   let totalAmount = 0;
   let statusCounts = { pending: 0, approved: 0, paid: 0 };
@@ -204,6 +204,7 @@ export const exportDesignFeesToCSV = (designFees, filters = {}) => {
     return [
       `"${(fee.designer_name || '').replace(/"/g, '""')}"`,
       `"${(fee.order?.event_name || '').replace(/"/g, '""')}"`,
+      `"${formatDate(fee.order?.event_date)}"`,
       `"${formatCurrency(amount)}"`,
       `"${formatDate(fee.created_at)}"`,
       `"${(fee.status || '').toUpperCase()}"`,
@@ -288,11 +289,12 @@ export const exportCombinedReportToCSV = (designFees, crewAttendance, orders, fi
   ];
 
   // Design Fees Section
-  const dfHeaders = ['DESIGN FEES', '', '', '', '', ''];
-  const dfCols = ['Designer Name', 'Event Name', 'Fee Amount (Rp)', 'Submission Date', 'Status', 'Notes'];
+  const dfHeaders = ['DESIGN FEES', '', '', '', '', '', ''];
+  const dfCols = ['Designer Name', 'Event Name', 'Event Date', 'Fee Amount (Rp)', 'Submission Date', 'Status', 'Notes'];
   const dfRows = designFees.map(fee => [
     `"${(fee.designer_name || '').replace(/"/g, '""')}"`,
     `"${(fee.order?.event_name || '').replace(/"/g, '""')}"`,
+    `"${formatDate(fee.order?.event_date)}"`,
     `"${formatCurrency(fee.fee_amount || 0)}"`,
     `"${formatDate(fee.created_at)}"`,
     `"${(fee.status || '').toUpperCase()}"`,

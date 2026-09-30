@@ -386,6 +386,7 @@ const FeesAndCompensationWidget = () => {
                       <tr>
                         <th className="px-4 py-3">Designer</th>
                         <th className="px-4 py-3">Event</th>
+                        <th className="px-4 py-3">Event Date</th>
                         <th className="px-4 py-3 text-right">Amount</th>
                         <th className="px-4 py-3">Submitted</th>
                         <th className="px-4 py-3 text-center">Status</th>
@@ -394,13 +395,14 @@ const FeesAndCompensationWidget = () => {
                     <tbody>
                       {filteredDesignFees.length === 0 ? (
                         <tr>
-                          <td colSpan="5" className="px-4 py-8 text-center text-muted-foreground">No design fees found matching filters.</td>
+                          <td colSpan="6" className="px-4 py-8 text-center text-muted-foreground">No design fees found matching filters.</td>
                         </tr>
                       ) : (
                         filteredDesignFees.map((fee) => (
                           <tr key={fee.id} onClick={() => setSelectedFee(fee)} className="border-b last:border-0 hover:bg-muted/30 cursor-pointer transition-colors">
                             <td className="px-4 py-3 font-medium">{fee.designer_name}</td>
                             <td className="px-4 py-3 text-muted-foreground truncate max-w-[200px]">{fee.order?.event_name || 'N/A'}</td>
+                            <td className="px-4 py-3 text-muted-foreground">{fee.order?.event_date ? format(new Date(fee.order.event_date), 'MMM dd, yyyy') : '-'}</td>
                             <td className="px-4 py-3 text-right font-numeric font-medium">{formatRupiah(fee.fee_amount || 0)}</td>
                             <td className="px-4 py-3 text-muted-foreground">{format(new Date(fee.created_at), 'MMM dd, yyyy')}</td>
                             <td className="px-4 py-3 text-center">{getFeeBadge(fee.status)}</td>

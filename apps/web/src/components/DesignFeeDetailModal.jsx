@@ -87,6 +87,12 @@ const DesignFeeDetailModal = ({ isOpen, onClose, feeRecord, onSave }) => {
               </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right text-muted-foreground">Event Date</Label>
+              <div className="col-span-3 text-sm">
+                {feeRecord.order?.event_date ? format(new Date(feeRecord.order.event_date), 'MMM dd, yyyy') : '-'}
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
               <Label className="text-right text-muted-foreground">Submitted</Label>
               <div className="col-span-3 text-sm">
                 {feeRecord.created_at ? format(new Date(feeRecord.created_at), 'MMM dd, yyyy HH:mm') : 'N/A'}
