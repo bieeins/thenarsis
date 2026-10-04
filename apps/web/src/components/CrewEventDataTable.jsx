@@ -27,6 +27,8 @@ const CrewEventDataTable = ({ events = [], loading, error, onToggleAttendance, o
   const [statusFilter, setStatusFilter] = useState('All');
   const [locationFilter, setLocationFilter] = useState('All');
   const [datePreset, setDatePreset] = useState('All');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   
   const [sortConfig, setSortConfig] = useState({ key: 'eventDate', direction: 'desc' });
   const [page, setPage] = useState(1);
@@ -47,6 +49,8 @@ const CrewEventDataTable = ({ events = [], loading, error, onToggleAttendance, o
     setStatusFilter('All');
     setLocationFilter('All');
     setDatePreset('All');
+    setDateFrom('');
+    setDateTo('');
     setPage(1);
   };
 
@@ -54,7 +58,9 @@ const CrewEventDataTable = ({ events = [], loading, error, onToggleAttendance, o
     search.trim() !== '',
     statusFilter !== 'All',
     locationFilter !== 'All',
-    datePreset !== 'All'
+    datePreset !== 'All',
+    dateFrom !== '',
+    dateTo !== ''
   ].filter(Boolean).length;
 
   const isDateInRange = (dateString, preset) => {
@@ -92,6 +98,12 @@ const CrewEventDataTable = ({ events = [], loading, error, onToggleAttendance, o
     if (datePreset !== 'All') {
       result = result.filter(e => isDateInRange(e?.event_date, datePreset));
     }
+    if (dateFrom) {
+      result = result.filter(e => e?.event_date && e.event_date >= dateFrom);
+    }
+    if (dateTo) {
+      result = result.filter(e => e?.event_date && e.event_date <= dateTo);
+    }
 
     // Sort
     result.sort((a, b) => {
@@ -113,7 +125,7 @@ const CrewEventDataTable = ({ events = [], loading, error, onToggleAttendance, o
     });
 
     return result;
-  }, [events, search, statusFilter, locationFilter, datePreset, sortConfig]);
+  }, [events, search, statusFilter, locationFilter, datePreset, dateFrom, dateTo, sortConfig]);
 
   const totalRecords = filteredAndSortedEvents.length;
   const totalPages = Math.ceil(totalRecords / pageSize);
@@ -224,7 +236,7 @@ const CrewEventDataTable = ({ events = [], loading, error, onToggleAttendance, o
       <div className="bg-card border rounded-2xl p-4 sm:p-5 shadow-sm">
         <div className="flex flex-col lg:flex-row gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <Input 
               placeholder="Search event, customer, or assigner..." 
               className="pl-9 h-11"
@@ -270,6 +282,20 @@ const CrewEventDataTable = ({ events = [], loading, error, onToggleAttendance, o
                 <SelectItem value="Last 30 Days">Last 30 Days</SelectItem>
               </SelectContent>
             </Select>
+            <Input
+              type="date"
+              className="w-full sm:w-[140px] h-11"
+              value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+              title="Event date from"
+            />
+            <Input
+              type="date"
+              className="w-full sm:w-[140px] h-11"
+              value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+              title="Event date to"
+            />
 
             <Button 
               variant="outline" 

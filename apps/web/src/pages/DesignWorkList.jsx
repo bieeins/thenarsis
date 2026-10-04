@@ -34,6 +34,8 @@ const DesignWorkList = () => {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
     if (currentUser) {
@@ -79,9 +81,16 @@ const DesignWorkList = () => {
                order?.customer_name?.toLowerCase().includes(lowerQuery);
       });
     }
+
+    if (dateFrom) {
+      result = result.filter(w => w.order?.event_date && w.order.event_date >= dateFrom);
+    }
+    if (dateTo) {
+      result = result.filter(w => w.order?.event_date && w.order.event_date <= dateTo);
+    }
     
     setFilteredWork(result);
-  }, [statusFilter, searchQuery, workList]);
+  }, [statusFilter, searchQuery, dateFrom, dateTo, workList]);
 
   if (loading) {
     return (
@@ -141,19 +150,19 @@ const DesignWorkList = () => {
           <Card className="border-0 shadow-lg overflow-hidden">
             <CardHeader className="bg-card border-b border-border flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center pb-4">
               <CardTitle>Assigned Projects</CardTitle>
-              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                <div className="relative w-full sm:w-64">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <div className="flex flex-wrap gap-3 w-full sm:w-auto items-center">
+                <div className="relative shrink-0 w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
                   <Input
                     type="text"
                     placeholder="Search events or clients..."
-                    className="pl-9 bg-background"
+                    className="pl-9 h-10 bg-background"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-44 bg-background">
+                  <SelectTrigger className="w-full sm:w-44 h-10 bg-background">
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -164,6 +173,20 @@ const DesignWorkList = () => {
                     <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
                 </Select>
+                <Input
+                  type="date"
+                  className="w-full sm:w-40 h-10 bg-background"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  title="Event date from"
+                />
+                <Input
+                  type="date"
+                  className="w-full sm:w-40 h-10 bg-background"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  title="Event date to"
+                />
               </div>
             </CardHeader>
             <CardContent className="p-0">

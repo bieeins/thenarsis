@@ -19,6 +19,8 @@ const CrewMyEventsPageContent = () => {
   const [dateFilter, setDateFilter] = useState('All');
   const [packageFilter, setPackageFilter] = useState('All');
   const [sortBy, setSortBy] = useState('date_asc');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
     console.group(`[CrewMyEventsPage] 📋 Component State Logging`);
@@ -82,6 +84,13 @@ const CrewMyEventsPageContent = () => {
       result = result.filter(e => e.package_name === packageFilter);
     }
 
+    if (dateFrom) {
+      result = result.filter(e => e.event_date && e.event_date >= dateFrom);
+    }
+    if (dateTo) {
+      result = result.filter(e => e.event_date && e.event_date <= dateTo);
+    }
+
     result.sort((a, b) => {
       if (sortBy === 'date_asc' || sortBy === 'date_desc') {
         const dateA = new Date(a.event_date || 0).getTime();
@@ -107,7 +116,7 @@ const CrewMyEventsPageContent = () => {
     console.log(`Filtered result count: ${result.length}`);
     console.groupEnd();
     return result;
-  }, [events, searchQuery, statusFilter, dateFilter, packageFilter, sortBy]);
+  }, [events, searchQuery, statusFilter, dateFilter, packageFilter, sortBy, dateFrom, dateTo]);
 
   const handleClearFilters = () => {
     console.log('[CrewMyEventsPage] Clearing all filters');
@@ -116,6 +125,8 @@ const CrewMyEventsPageContent = () => {
     setDateFilter('All');
     setPackageFilter('All');
     setSortBy('date_asc');
+    setDateFrom('');
+    setDateTo('');
   };
 
   const activeFiltersCount = [
@@ -123,7 +134,9 @@ const CrewMyEventsPageContent = () => {
     statusFilter !== 'All',
     dateFilter !== 'All',
     packageFilter !== 'All',
-    sortBy !== 'date_asc'
+    sortBy !== 'date_asc',
+    dateFrom !== '',
+    dateTo !== ''
   ].filter(Boolean).length;
 
   console.log(`[CrewMyEventsPage] (4) Before rendering Event Cards. Loading: ${loading}, Error: ${error !== null}`);
@@ -160,73 +173,88 @@ const CrewMyEventsPageContent = () => {
         </div>
 
         <div className="bg-card border border-border/60 rounded-2xl p-5 shadow-sm mb-8">
-          <div className="flex flex-col xl:flex-row gap-4">
-            <div className="relative flex-1 min-w-[250px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search events, customers, locations..." 
+          <div className="flex flex-wrap gap-3 items-center">
+            <div className="relative shrink-0 w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
+              <Input
+                placeholder="Search events, customers, locations..."
                 className="pl-9 h-11 border-border/60 focus-visible:ring-[hsl(var(--accent-yellow))]"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 disabled={loading || !!error}
               />
             </div>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 xl:w-auto shrink-0">
-              <Select value={statusFilter} onValueChange={setStatusFilter} disabled={loading || !!error}>
-                <SelectTrigger className="h-11 border-border/60">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All Statuses</SelectItem>
-                  <SelectItem value="Pending">Pending</SelectItem>
-                  <SelectItem value="In Progress">In Progress</SelectItem>
-                  <SelectItem value="Completed">Completed</SelectItem>
-                  <SelectItem value="Cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
 
-              <Select value={dateFilter} onValueChange={setDateFilter} disabled={loading || !!error}>
-                <SelectTrigger className="h-11 border-border/60">
-                  <SelectValue placeholder="Timeframe" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All Dates</SelectItem>
-                  <SelectItem value="upcoming">Upcoming</SelectItem>
-                  <SelectItem value="past">Past</SelectItem>
-                </SelectContent>
-              </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter} disabled={loading || !!error}>
+              <SelectTrigger className="h-11 border-border/60 w-full sm:w-[150px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Statuses</SelectItem>
+                <SelectItem value="Pending">Pending</SelectItem>
+                <SelectItem value="In Progress">In Progress</SelectItem>
+                <SelectItem value="Completed">Completed</SelectItem>
+                <SelectItem value="Cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
 
-              <Select value={packageFilter} onValueChange={setPackageFilter} disabled={loading || !!error}>
-                <SelectTrigger className="h-11 border-border/60">
-                  <SelectValue placeholder="Package" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All Packages</SelectItem>
-                  {packageOptions.map(pkg => (
-                    <SelectItem key={pkg} value={pkg}>{pkg}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <Select value={dateFilter} onValueChange={setDateFilter} disabled={loading || !!error}>
+              <SelectTrigger className="h-11 border-border/60 w-full sm:w-[140px]">
+                <SelectValue placeholder="Timeframe" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Dates</SelectItem>
+                <SelectItem value="upcoming">Upcoming</SelectItem>
+                <SelectItem value="past">Past</SelectItem>
+              </SelectContent>
+            </Select>
 
-              <Select value={sortBy} onValueChange={setSortBy} disabled={loading || !!error}>
-                <SelectTrigger className="h-11 border-border/60">
-                  <SelectValue placeholder="Sort By" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="date_asc">Date (Old-New)</SelectItem>
-                  <SelectItem value="date_desc">Date (New-Old)</SelectItem>
-                  <SelectItem value="customer_asc">Customer (A-Z)</SelectItem>
-                  <SelectItem value="customer_desc">Customer (Z-A)</SelectItem>
-                  <SelectItem value="status">Status</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Select value={packageFilter} onValueChange={setPackageFilter} disabled={loading || !!error}>
+              <SelectTrigger className="h-11 border-border/60 w-full sm:w-[150px]">
+                <SelectValue placeholder="Package" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Packages</SelectItem>
+                {packageOptions.map(pkg => (
+                  <SelectItem key={pkg} value={pkg}>{pkg}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Input
+              type="date"
+              className="h-11 border-border/60 w-full sm:w-[140px]"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              disabled={loading || !!error}
+              title="Event date from"
+            />
+            <Input
+              type="date"
+              className="h-11 border-border/60 w-full sm:w-[140px]"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              disabled={loading || !!error}
+              title="Event date to"
+            />
+
+            <Select value={sortBy} onValueChange={setSortBy} disabled={loading || !!error}>
+              <SelectTrigger className="h-11 border-border/60 w-full sm:w-[150px]">
+                <SelectValue placeholder="Sort By" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date_asc">Date (Old-New)</SelectItem>
+                <SelectItem value="date_desc">Date (New-Old)</SelectItem>
+                <SelectItem value="customer_asc">Customer (A-Z)</SelectItem>
+                <SelectItem value="customer_desc">Customer (Z-A)</SelectItem>
+                <SelectItem value="status">Status</SelectItem>
+              </SelectContent>
+            </Select>
 
             {activeFiltersCount > 0 && (
-              <Button 
-                variant="outline" 
-                className="h-11 px-4 xl:w-auto text-muted-foreground shrink-0 border-border/60"
+              <Button
+                variant="outline"
+                className="h-11 px-4 w-full sm:w-auto text-muted-foreground shrink-0 border-border/60"
                 onClick={handleClearFilters}
                 disabled={loading || !!error}
               >
