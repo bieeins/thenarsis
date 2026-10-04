@@ -12,6 +12,7 @@ export const invoicesListQuerySchema = z.object({
   page: z.coerce.number().optional(),
   perPage: z.coerce.number().optional(),
   search: z.string().optional(),
+  order_id: z.string().optional(),
   sort: z.string().optional(),
   order: z.enum(['asc', 'desc']).optional(),
 });

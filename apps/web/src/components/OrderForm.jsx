@@ -91,11 +91,11 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
     (async () => {
       try {
         const [invoices, items] = await Promise.all([
-          invoiceService.listAll(),
+          invoiceService.listAll({ order_id: order.id }),
           orderItemService.listByOrder(order.id),
         ]);
         if (cancelled) return;
-        const invoice = invoices.find((inv) => inv.order_id === order.id) || null;
+        const invoice = invoices[0] || null;
         setExistingInvoice(invoice);
         setExistingItem(items?.[0] || null);
         if (invoice) {
@@ -124,7 +124,8 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
   const handleProductChange = (productId) => {
     const product = products.find(p => p.id === productId);
     setSelectedProduct(product);
-    setFormData({ ...formData, product_id: productId });
+    // Clear adjusted_price so the new base_price is used, not the old invoice amount.
+    setFormData({ ...formData, product_id: productId, adjusted_price: '' });
   };
 
   const generateInvoiceNumber = () => {
@@ -160,7 +161,7 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
         if (existingInvoice) {
           const newPrice = formData.adjusted_price !== ''
             ? parseFloat(formData.adjusted_price)
-            : (baseProduct?.base_price ?? Number(existingInvoice.total_amount));
+            : (baseProduct?.base_price ?? 0);
           if (newPrice !== Number(existingInvoice.total_amount)) {
             await invoiceService.update(existingInvoice.id, { total_amount: newPrice });
             if (existingItem) {
