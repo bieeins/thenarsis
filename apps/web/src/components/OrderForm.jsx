@@ -46,6 +46,14 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
     loadProducts();
   }, []);
 
+  // Sync selectedProduct when editing (products load async after order is set).
+  useEffect(() => {
+    if (order && products.length > 0 && !selectedProduct) {
+      const p = products.find((x) => x.id === order.product_id);
+      if (p) setSelectedProduct(p);
+    }
+  }, [order, products]);
+
   useEffect(() => {
     if (order) {
       setFormData({
@@ -148,8 +156,8 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
           description: formData.description
         });
 
+        const baseProduct = products.find((p) => p.id === formData.product_id);
         if (existingInvoice) {
-          const baseProduct = products.find((p) => p.id === formData.product_id);
           const newPrice = formData.adjusted_price !== ''
             ? parseFloat(formData.adjusted_price)
             : (baseProduct?.base_price ?? Number(existingInvoice.total_amount));
@@ -161,6 +169,16 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
               });
             }
           }
+        } else {
+          const invoiceNumber = generateInvoiceNumber();
+          const newPrice = formData.adjusted_price !== ''
+            ? parseFloat(formData.adjusted_price)
+            : (baseProduct?.base_price || 0);
+          await invoiceService.create({
+            order_id: order.id,
+            invoice_number: invoiceNumber,
+            total_amount: newPrice,
+          });
         }
         toast.success('Order updated successfully');
       } else {
@@ -310,26 +328,24 @@ const OrderForm = ({ open, onOpenChange, order, onSuccess }) => {
             </div>
           )}
 
-          {(!order || existingInvoice) && (
-            <div>
-              <Label htmlFor="adjusted_price">{order ? 'Order Price' : 'Adjusted Price (Optional)'}</Label>
-              <Input
-                id="adjusted_price"
-                type="number"
-                value={formData.adjusted_price}
-                onChange={(e) => setFormData({ ...formData, adjusted_price: e.target.value })}
-                min="0"
-                step="0.01"
-                className="text-gray-900"
-                placeholder="Leave empty to use base price"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                {order
-                  ? 'Changing this updates the invoice total. Leave empty to reset to the package base price.'
-                  : 'Enter a custom price for discounts or special pricing'}
-              </p>
-            </div>
-          )}
+          <div>
+            <Label htmlFor="adjusted_price">{order ? 'Order Price' : 'Adjusted Price (Optional)'}</Label>
+            <Input
+              id="adjusted_price"
+              type="number"
+              value={formData.adjusted_price}
+              onChange={(e) => setFormData({ ...formData, adjusted_price: e.target.value })}
+              min="0"
+              step="0.01"
+              className="text-gray-900"
+              placeholder="Leave empty to use base price"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              {order
+                ? 'Changing this updates the invoice total. Leave empty to reset to the package base price.'
+                : 'Enter a custom price for discounts or special pricing'}
+            </p>
+          </div>
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

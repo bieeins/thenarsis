@@ -5,7 +5,7 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Checkbox } from '@/components/ui/checkbox.jsx';
 import { Button } from '@/components/ui/button.jsx';
-import { MapPin, Calendar, Clock, User, Banknote, ChevronRight, Package, File, Loader2, AlertCircle } from 'lucide-react';
+import { MapPin, Calendar, User, Banknote, ChevronRight, Package, File, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { crewAssignmentService } from '@/services/crewAssignmentService.js';
 import DownloadFilesModal from '@/components/DownloadFilesModal.jsx';
@@ -126,12 +126,6 @@ const CrewEventCard = ({ event }) => {
     catch { return 'Invalid Date'; }
   };
 
-  const formatTime = (timeStr) => {
-    if (!timeStr) return 'Time TBD';
-    try { return format(new Date(timeStr), 'h:mm a'); } 
-    catch { return 'Invalid Time'; }
-  };
-
   const isAttended = attendanceStatus === 'confirmed' || attendanceStatus === 'completed';
 
   return (
@@ -162,9 +156,7 @@ const CrewEventCard = ({ event }) => {
             <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
               <Calendar className="w-4 h-4 text-[hsl(var(--accent-yellow))]" />
               <span className="font-medium text-foreground">{formatDate(event?.event_date)}</span>
-              <span className="text-border mx-1">|</span>
-              <Clock className="w-4 h-4 text-[hsl(var(--accent-yellow))]" />
-              <span>{formatTime(event?.event_time)}</span>
+
             </div>
             <div className="flex items-start gap-2.5 text-sm text-muted-foreground">
               <MapPin className="w-4 h-4 text-[hsl(var(--accent-yellow))] shrink-0 mt-0.5" />

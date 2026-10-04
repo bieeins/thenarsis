@@ -1,8 +1,6 @@
 import React from 'react';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isWeekend } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock } from 'lucide-react';
-
 const CalendarGrid = ({ currentDate, eventsByDate, onEventClick, timezone }) => {
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(monthStart);
@@ -19,20 +17,6 @@ const CalendarGrid = ({ currentDate, eventsByDate, onEventClick, timezone }) => 
     if (s === 'completed') return 'bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-200';
     if (s === 'cancelled') return 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200';
     return 'bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200';
-  };
-
-  const formatTimeWithZone = (dateString) => {
-    try {
-      const date = new Date(dateString);
-      return new Intl.DateTimeFormat('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-        timeZone: timezone === 'UTC' ? 'UTC' : timezone
-      }).format(date);
-    } catch (e) {
-      return format(new Date(dateString), 'HH:mm');
-    }
   };
 
   return (
@@ -87,10 +71,7 @@ const CalendarGrid = ({ currentDate, eventsByDate, onEventClick, timezone }) => 
                       {event.product?.package_name && (
                         <div className="truncate opacity-70 text-[10px]">{event.product.package_name}</div>
                       )}
-                      <div className="flex items-center gap-1 mt-0.5 opacity-80 text-[10px]">
-                        <Clock className="w-3 h-3 shrink-0" />
-                        <span>{formatTimeWithZone(event.event_date)}</span>
-                      </div>
+
                     </div>
                   ))}
                   {dayEvents.length > 3 && (

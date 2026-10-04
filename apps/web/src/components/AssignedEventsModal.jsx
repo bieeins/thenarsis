@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Skeleton } from '@/components/ui/skeleton.jsx';
-import { Calendar, MapPin, Package, Clock, User, Banknote, ChevronRight, CalendarX, AlertCircle, RefreshCcw } from 'lucide-react';
+import { Calendar, MapPin, Package, User, Banknote, ChevronRight, CalendarX, AlertCircle, RefreshCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatRupiah } from '@/lib/currency.js';
 
@@ -78,12 +78,6 @@ const AssignedEventsModal = ({ isOpen, onOpenChange, events, loading, error, onR
     if (!dateStr) return 'Date TBD';
     try { return format(new Date(dateStr), 'MMM dd, yyyy'); } 
     catch { return 'Invalid Date'; }
-  };
-
-  const formatTime = (timeStr) => {
-    if (!timeStr) return 'Time TBD';
-    try { return format(new Date(timeStr), 'h:mm a'); } 
-    catch { return 'Invalid Time'; }
   };
 
   const safeEvents = Array.isArray(events) ? events : [];
@@ -190,9 +184,7 @@ const AssignedEventsModal = ({ isOpen, onOpenChange, events, loading, error, onR
                       <div className="flex items-center gap-2">
                         <Calendar className="w-3.5 h-3.5 text-muted-foreground/70" />
                         <span className="font-medium text-foreground">{formatDate(evt.event_date)}</span>
-                        <span className="mx-0.5">•</span>
-                        <Clock className="w-3.5 h-3.5 text-muted-foreground/70" />
-                        <span>{formatTime(evt.event_time)}</span>
+
                       </div>
                       <div className="flex items-center gap-2">
                         <MapPin className="w-3.5 h-3.5 text-muted-foreground/70 shrink-0" />

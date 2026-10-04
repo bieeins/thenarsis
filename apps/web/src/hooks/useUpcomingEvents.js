@@ -39,7 +39,6 @@ export const useUpcomingEvents = () => {
             event_name: order?.event_name,
             customer_name: order?.customer_name,
             event_date: order?.event_date,
-            event_time: order?.event_date,
             event_location: order?.event_location,
             package_name: order?.product?.package_name,
             status: order?.status,

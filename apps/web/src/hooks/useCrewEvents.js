@@ -75,7 +75,6 @@ export const useCrewEvents = () => {
             customer_name: order.customer_name || 'Unknown Customer',
             phone_number: order.phone_number || 'N/A',
             event_date: order.event_date || null,
-            event_time: order.event_time || order.event_date || null,
             event_location: order.event_location || 'Location TBD',
             status: order.status || 'Pending',
             notes: order.description || '',

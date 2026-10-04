@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { 
-  Calendar, MapPin, Clock, ArrowRight, User, Package, AlertCircle, CalendarX2, Link as LinkIcon, Image as ImageIcon, ExternalLink
+  Calendar, MapPin, ArrowRight, User, Package, AlertCircle, CalendarX2, Link as LinkIcon, Image as ImageIcon, ExternalLink
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card.jsx';
 import { Button } from '@/components/ui/button.jsx';
@@ -127,12 +127,6 @@ const UpcomingFieldWork = () => {
                 </span>
               </div>
               
-              <div className="flex items-start gap-2.5 text-sm">
-                <Clock className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-                <span className="text-muted-foreground">
-                  {event.event_time ? format(new Date(event.event_time), 'HH:mm') : 'Time not set'}
-                </span>
-              </div>
               
               <div className="flex items-start gap-2.5 text-sm">
                 <MapPin className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
