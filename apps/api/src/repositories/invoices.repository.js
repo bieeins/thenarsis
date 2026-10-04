@@ -11,9 +11,13 @@ export const invoicesRepository = {
     return db(TABLE).where({ invoice_number: invoiceNumber }).first();
   },
 
-  async list({ search, page, perPage, offset, sortField, sortOrder }) {
+  async list({ search, orderId, page, perPage, offset, sortField, sortOrder }) {
     const query = db(TABLE);
     const countQuery = db(TABLE);
+    if (orderId) {
+      query.where({ order_id: orderId });
+      countQuery.where({ order_id: orderId });
+    }
     if (search) {
       const like = `%${search.toLowerCase()}%`;
       query.whereRaw('LOWER(invoice_number) LIKE ?', [like]);

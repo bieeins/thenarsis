@@ -29,7 +29,7 @@ export const invoicesService = {
     const { page, perPage, offset } = parsePagination(query);
     const { field, order } = parseSort(query, SORTABLE_FIELDS);
     const { rows, totalItems } = await invoicesRepository.list({
-      search: query.search, page, perPage, offset, sortField: field, sortOrder: order,
+      search: query.search, orderId: query.order_id, page, perPage, offset, sortField: field, sortOrder: order,
     });
     return { rows, page, perPage, totalItems };
   },
