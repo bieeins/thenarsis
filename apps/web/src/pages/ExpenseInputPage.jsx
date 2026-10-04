@@ -12,10 +12,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Wallet, PieChart, Plus } from 'lucide-react';
+import { Wallet, PieChart, Plus, Pencil, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { expenseService } from '@/services/expenseService.js';
@@ -32,14 +33,18 @@ const ExpenseInputPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [categories, setCategories] = useState([]);
+  const [editingExpense, setEditingExpense] = useState(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const emptyForm = {
     transaction_date: new Date().toISOString().split('T')[0],
     category: '',
     amount: '',
     description: '',
     receipt_file: null
-  });
+  };
+
+  const [formData, setFormData] = useState(emptyForm);
 
   useEffect(() => {
     loadExpenses();
@@ -62,6 +67,38 @@ const ExpenseInputPage = () => {
     }
   };
 
+  const resetForm = () => {
+    setFormData(emptyForm);
+    setEditingExpense(null);
+    setEditDialogOpen(false);
+    const fileInput = document.getElementById('receipt_file');
+    if (fileInput) fileInput.value = '';
+  };
+
+  const handleEdit = (expense) => {
+    setEditingExpense(expense);
+    setFormData({
+      transaction_date: expense.transaction_date?.split('T')[0] ?? expense.transaction_date?.split(' ')[0] ?? '',
+      category: expense.category || '',
+      amount: expense.amount || '',
+      description: expense.description || '',
+      receipt_file: null,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleDelete = async (expense) => {
+    if (!window.confirm('Hapus pengeluaran ini? Tindakan tidak bisa dibatalkan.')) return;
+    try {
+      await expenseService.remove(expense.id);
+      toast.success('Pengeluaran dihapus');
+      if (editingExpense?.id === expense.id) resetForm();
+      loadExpenses();
+    } catch (error) {
+      toast.error(error.message || 'Gagal menghapus pengeluaran');
+    }
+  };
+
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
       setFormData({ ...formData, receipt_file: e.target.files[0] });
@@ -73,33 +110,34 @@ const ExpenseInputPage = () => {
     setSubmitting(true);
 
     try {
-      let receiptFileId = null;
+      let receiptFileId = editingExpense?.receipt_file ?? null;
       if (formData.receipt_file) {
         const uploadRes = await fileService.upload(formData.receipt_file, 'expenses');
         receiptFileId = uploadRes.data?.id || null;
       }
 
-      await expenseService.create({
-        transaction_date: formData.transaction_date + ' 12:00:00.000Z',
-        category: formData.category,
-        amount: formData.amount,
-        description: formData.description,
-        uploaded_by_id: currentUser?.id,
-        receipt_file: receiptFileId,
-      });
+      if (editingExpense) {
+        await expenseService.update(editingExpense.id, {
+          transaction_date: formData.transaction_date + ' 12:00:00.000Z',
+          category: formData.category,
+          amount: formData.amount,
+          description: formData.description,
+          receipt_file: receiptFileId,
+        });
+        toast.success('Pengeluaran diperbarui');
+      } else {
+        await expenseService.create({
+          transaction_date: formData.transaction_date + ' 12:00:00.000Z',
+          category: formData.category,
+          amount: formData.amount,
+          description: formData.description,
+          uploaded_by_id: currentUser?.id,
+          receipt_file: receiptFileId,
+        });
+        toast.success('Expense recorded successfully');
+      }
 
-      toast.success('Expense recorded successfully');
-      setFormData({
-        transaction_date: new Date().toISOString().split('T')[0],
-        category: '',
-        amount: '',
-        description: '',
-        receipt_file: null
-      });
-      // Reset file input manually
-      const fileInput = document.getElementById('receipt_file');
-      if (fileInput) fileInput.value = '';
-      
+      resetForm();
       loadExpenses();
     } catch (error) {
       toast.error(error.message || 'Failed to record expense');
@@ -108,9 +146,27 @@ const ExpenseInputPage = () => {
     }
   };
 
-  const filteredExpenses = categoryFilter === 'all' 
-    ? expenses 
-    : expenses.filter(e => e.category === categoryFilter);
+  // ── filters & pagination ──────────────────────────────────────────────
+  const PAGE_SIZE = 10;
+  const [monthFilter, setMonthFilter] = React.useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [page, setPage] = React.useState(1);
+
+  const handleMonthChange = (val) => { setMonthFilter(val); setPage(1); };
+  const handleCategoryChange = (val) => { setCategoryFilter(val); setPage(1); };
+
+  const filteredExpenses = expenses.filter((e) => {
+    const dateStr = e.transaction_date?.slice(0, 7);
+    const monthOk = monthFilter === 'all' || dateStr === monthFilter;
+    const catOk = categoryFilter === 'all' || e.category === categoryFilter;
+    return monthOk && catOk;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filteredExpenses.length / PAGE_SIZE));
+  const pagedExpenses = filteredExpenses.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const availableMonths = [...new Set(expenses.map((e) => e.transaction_date?.slice(0, 7)).filter(Boolean))].sort().reverse();
 
   const totalFiltered = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
 
@@ -263,7 +319,7 @@ const ExpenseInputPage = () => {
                       <div className="flex items-center gap-2 text-muted-foreground font-medium">
                         <PieChart className="w-5 h-5" /> Summary
                       </div>
-                      <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                      <Select value={categoryFilter} onValueChange={handleCategoryChange}>
                         <SelectTrigger className="w-[140px] h-8 text-xs">
                           <SelectValue placeholder="Filter" />
                         </SelectTrigger>
@@ -291,8 +347,40 @@ const ExpenseInputPage = () => {
 
               <Card className="shadow-lg border-0">
                 <CardHeader>
-                  <CardTitle>Riwayat Pengeluaran (History)</CardTitle>
-                  <CardDescription>Recent expenses based on your filter</CardDescription>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex-1">
+                      <CardTitle>Riwayat Pengeluaran</CardTitle>
+                      <CardDescription>
+                        {filteredExpenses.length} transaksi
+                        {monthFilter !== 'all' ? ` — ${monthFilter}` : ''}
+                        {categoryFilter !== 'all' ? ` — ${categoryFilter}` : ''}
+                      </CardDescription>
+                    </div>
+                    {/* Filter bulan */}
+                    <Select value={monthFilter} onValueChange={handleMonthChange}>
+                      <SelectTrigger className="w-[150px] h-8 text-xs">
+                        <SelectValue placeholder="Pilih bulan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua Bulan</SelectItem>
+                        {availableMonths.map((m) => (
+                          <SelectItem key={m} value={m}>{m}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {/* Filter kategori */}
+                    <Select value={categoryFilter} onValueChange={handleCategoryChange}>
+                      <SelectTrigger className="w-[150px] h-8 text-xs">
+                        <SelectValue placeholder="Semua Kategori" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua Kategori</SelectItem>
+                        {categories.map(cat => (
+                          <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {filteredExpenses.length === 0 ? (
@@ -300,8 +388,9 @@ const ExpenseInputPage = () => {
                       <p className="text-muted-foreground">Belum ada data pengeluaran.</p>
                     </div>
                   ) : (
+                    <>
                     <div className="space-y-4">
-                      {filteredExpenses.map((expense) => (
+                      {pagedExpenses.map((expense) => (
                         <div key={expense.id} className="flex flex-col sm:flex-row justify-between p-4 rounded-xl border bg-card hover:shadow-md transition-shadow">
                           <div className="mb-2 sm:mb-0">
                             <div className="flex items-center gap-2 mb-1">
@@ -317,7 +406,7 @@ const ExpenseInputPage = () => {
                               <p className="text-sm mt-2 max-w-[500px] truncate">{expense.description}</p>
                             )}
                           </div>
-                          <div className="flex items-center">
+                          <div className="flex items-center gap-1">
                             {expense.receipt_file && (
                               <Button
                                 variant="ghost"
@@ -334,10 +423,44 @@ const ExpenseInputPage = () => {
                                 View Receipt
                               </Button>
                             )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleEdit(expense)}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              onClick={() => handleDelete(expense)}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
                           </div>
                         </div>
                       ))}
                     </div>
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-between pt-4 border-t mt-4">
+                        <p className="text-sm text-muted-foreground">
+                          {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filteredExpenses.length)} dari {filteredExpenses.length}
+                        </p>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page === 1}>
+                            ← Prev
+                          </Button>
+                          <span className="flex items-center text-sm px-2">{page} / {totalPages}</span>
+                          <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page === totalPages}>
+                            Next →
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    </>
                   )}
                 </CardContent>
               </Card>
@@ -345,6 +468,92 @@ const ExpenseInputPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Edit Dialog — muncul di tengah layar, tidak perlu scroll */}
+      <Dialog open={editDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="w-4 h-4" />
+              Edit Pengeluaran
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+            <div>
+              <Label htmlFor="edit_transaction_date">Tanggal (Date) *</Label>
+              <Input
+                id="edit_transaction_date"
+                type="date"
+                value={formData.transaction_date}
+                onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
+                required
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit_category">Kategori *</Label>
+              <Input
+                id="edit_category"
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                required
+                placeholder="e.g. Bahan Baku"
+                className="mt-1"
+                list="edit_category_list"
+              />
+              <datalist id="edit_category_list">
+                {categories.map((cat) => <option key={cat} value={cat} />)}
+              </datalist>
+            </div>
+            <div>
+              <Label htmlFor="edit_amount">Jumlah (IDR) *</Label>
+              <Input
+                id="edit_amount"
+                type="number"
+                min="0"
+                step="1"
+                value={formData.amount}
+                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                required
+                placeholder="e.g. 150000"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit_description">Deskripsi (Description)</Label>
+              <Textarea
+                id="edit_description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Detail pengeluaran..."
+                className="mt-1"
+                rows={3}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit_receipt_file">Bukti / Nota (ganti jika perlu)</Label>
+              <Input
+                id="edit_receipt_file"
+                type="file"
+                accept="image/*,.pdf"
+                onChange={(e) => setFormData({ ...formData, receipt_file: e.target.files?.[0] || null })}
+                className="mt-1"
+              />
+              {editingExpense?.receipt_file && !formData.receipt_file && (
+                <p className="text-xs text-muted-foreground mt-1">Receipt lama tetap disimpan jika tidak upload baru.</p>
+              )}
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button type="submit" className="flex-1" disabled={submitting}>
+                {submitting ? 'Menyimpan...' : 'Update Pengeluaran'}
+              </Button>
+              <Button type="button" variant="outline" onClick={resetForm} disabled={submitting}>
+                Batal
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
